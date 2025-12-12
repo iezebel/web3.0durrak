@@ -38,7 +38,7 @@
 
         /* Зоны */
         #game-table {
-            position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
             width: 100%; max-width: 700px; height: 220px;
             display: flex; justify-content: center; align-items: center; pointer-events: none;
             z-index: 10;
@@ -67,18 +67,18 @@
 
         /* UI */
         .btn-action {
-            padding: 0.75rem 2rem; border-radius: 9999px; font-weight: bold; font-size: 1.1rem;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: all 0.2s; cursor: pointer;
-            border: 2px solid rgba(255,255,255,0.2);
+            padding: 0.8rem 2.5rem; border-radius: 12px; font-weight: 800; font-size: 1.2rem;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.2); transition: all 0.1s; cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px;
             pointer-events: auto;
         }
-        .btn-action:active { transform: scale(0.95); }
+        .btn-action:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
         
-        .btn-bito { background: #16a34a; color: white; } /* Green */
-        .btn-bito:hover { background: #15803d; }
+        .btn-bito { background: #22c55e; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3); } /* Ярко-зеленый */
+        .btn-bito:hover { background: #16a34a; }
         
-        .btn-take { background: #dc2626; color: white; } /* Red */
-        .btn-take:hover { background: #b91c1c; }
+        .btn-take { background: #ef4444; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3); } /* Ярко-красный */
+        .btn-take:hover { background: #dc2626; }
 
         #lobby-screen { z-index: 1000; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); }
         #game-over-screen { z-index: 2000; background: rgba(0,0,0,0.9); backdrop-filter: blur(8px); }
@@ -118,7 +118,6 @@
 
                 <!-- ОНЛАЙН -->
                 <div id="online-controls" class="space-y-3 opacity-50 pointer-events-none transition-opacity">
-                    <!-- СТАТУС ПОДКЛЮЧЕНИЯ -->
                     <div class="text-xs text-center text-gray-400 mb-2" id="auth-status">
                         Требуется свой Firebase Config
                     </div>
@@ -176,13 +175,13 @@
         <div id="game-table"></div>
 
         <!-- КНОПКИ ДЕЙСТВИЙ (БИТО / БЕРУ) -->
-        <!-- Поднял z-index до 100 и bottom-48 чтобы не перекрывалось -->
-        <div id="action-area" class="absolute bottom-48 left-1/2 transform -translate-x-1/2 z-[100] flex gap-6 pointer-events-none transition-opacity duration-200 opacity-0">
+        <!-- Максимальный Z-Index (999), без анимаций прозрачности, чтобы не было глюков -->
+        <div id="action-area" class="absolute bottom-48 left-1/2 transform -translate-x-1/2 z-[999] flex gap-6 hidden">
             <button id="btn-bito" onclick="performAction('bito')" class="btn-action btn-bito hidden">
-                Бито!
+                БИТО!
             </button>
             <button id="btn-take" onclick="performAction('take')" class="btn-action btn-take hidden">
-                Взять
+                ВЗЯТЬ
             </button>
         </div>
 
@@ -264,8 +263,6 @@
                             document.getElementById('online-controls').classList.remove('opacity-50', 'pointer-events-none');
                         }
                     });
-                } else {
-                    console.log("Онлайн не настроен (нет конфига)");
                 }
             } catch (e) {
                 console.error("Firebase Init Error:", e);
@@ -439,7 +436,7 @@
                 const hasUndefended = newTable.some(p => !p.defend);
                 if (!hasUndefended) {
                     newTurn = localState.attacker;
-                    if (GAME_MODE === 'OFFLINE') startBotTimer(); // Бот может подкинуть или сказать бито
+                    if (GAME_MODE === 'OFFLINE') startBotTimer();
                 }
             }
 
@@ -468,16 +465,14 @@
             let newTurn = localState.turn;
 
             if (action === 'bito') {
-                // Бито
                 [myUid, oppId].forEach(uid => {
                     while(h[uid].length < 6 && d.length > 0) h[uid].push(d.pop());
                 });
-                newAttacker = oppId; // Переход хода
+                newAttacker = oppId; 
                 newTurn = oppId;
                 if (GAME_MODE === 'OFFLINE') startBotTimer();
 
             } else if (action === 'take') {
-                // Взять
                 let cardsToTake = [];
                 localState.table.forEach(p => { cardsToTake.push(p.attack); if(p.defend) cardsToTake.push(p.defend); });
                 h[myUid] = [...h[myUid], ...cardsToTake];
@@ -516,12 +511,10 @@
             const amIAttacker = state.attacker === 'bot';
 
             if (amIAttacker) {
-                // БОТ АТАКУЕТ
                 if (state.table.length === 0) {
                     const c = getLowestCard(botHand, state.trumpSuit);
                     botApplyMove(c, 'attack');
                 } else {
-                    // Подкидывание
                     const ranks = new Set();
                     state.table.forEach(p => { ranks.add(p.attack.rank); if(p.defend) ranks.add(p.defend.rank); });
                     const options = botHand.filter(c => ranks.has(c.rank)).sort((a,b) => getCardPower(a, state.trumpSuit) - getCardPower(b, state.trumpSuit));
@@ -529,20 +522,13 @@
                     if (options.length > 0 && state.table.length < 6) {
                         botApplyMove(options[0], 'attack');
                     } else {
-                        processAction('bito'); // Бот жмет Бито
+                        processAction('bito'); 
                     }
                 }
             } else {
-                // БОТ ЗАЩИЩАЕТСЯ
                 const pairIdx = state.table.findIndex(p => !p.defend);
                 
-                // Если все отбито, но ход все еще у бота (значит, он ждет подкида),
-                // то он ничего не делает, ожидая действий игрока.
-                if (pairIdx === -1) {
-                     // Но в функции botApplyMove мы ставим state.turn = 'player' когда все отбито.
-                     // Если мы тут - что-то пошло не так или логика сменилась.
-                     return; 
-                }
+                if (pairIdx === -1) { return; }
 
                 const att = state.table[pairIdx].attack;
                 let beaters = botHand.filter(c => canBeat(c, att, state.trumpSuit));
@@ -551,7 +537,7 @@
                     beaters.sort((a,b) => getCardPower(a, state.trumpSuit) - getCardPower(b, state.trumpSuit));
                     botApplyMove(beaters[0], 'defend', pairIdx);
                 } else {
-                    processAction('take'); // Бот жмет Взять
+                    processAction('take'); 
                 }
             }
         }
@@ -567,10 +553,8 @@
                 state.table[idx].defend = card;
                 const hasUndefended = state.table.some(p => !p.defend);
                 if (hasUndefended) {
-                    // Продолжает бить
                     state.turn = 'bot'; startBotTimer();
                 } else {
-                    // Отбился - передает ход игроку (подкинуть или бито)
                     state.turn = 'player';
                 }
             }
@@ -663,23 +647,23 @@
             const btnBito = document.getElementById('btn-bito');
             const btnTake = document.getElementById('btn-take');
             
-            // Сбрасываем видимость каждый рендер
-            btnArea.classList.add('opacity-0', 'pointer-events-none');
+            // Сбрасываем видимость (скрываем всё по умолчанию)
+            btnArea.classList.add('hidden');
             btnBito.classList.add('hidden');
             btnTake.classList.add('hidden');
 
             if (state.table.length > 0) {
                 if (amIAttacker) {
-                    // АТАКА: Видим кнопку БИТО, если все карты отбиты
+                    // АТАКА: Кнопка БИТО, если все отбито
                     const allDefended = state.table.every(p => p.defend);
                     if (allDefended) {
-                        btnArea.classList.remove('opacity-0', 'pointer-events-none');
+                        btnArea.classList.remove('hidden');
                         btnBito.classList.remove('hidden');
                     }
                 } else {
-                    // ЗАЩИТА: Видим кнопку ВЗЯТЬ, только если наш ход
+                    // ЗАЩИТА: Кнопка ВЗЯТЬ (только если мой ход)
                     if (isMyTurn) {
-                        btnArea.classList.remove('opacity-0', 'pointer-events-none');
+                        btnArea.classList.remove('hidden');
                         btnTake.classList.remove('hidden');
                     }
                 }
@@ -725,5 +709,4 @@
         window.showToast=(m)=>{const t=document.getElementById('toast');t.innerText=m;t.classList.remove('opacity-0','scale-90');setTimeout(()=>t.classList.add('opacity-0','scale-90'),2000);}
     </script>
 </body>
-</html>
-
+</html>мм
