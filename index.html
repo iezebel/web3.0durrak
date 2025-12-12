@@ -25,11 +25,10 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
             display: flex; flex-direction: column; justify-content: space-between;
             padding: 4px; position: absolute;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s, top 0.2s, left 0.2s;
             cursor: pointer; border: 1px solid #ccc;
         }
         .card:hover { transform: translateY(-10px); z-index: 50 !important; }
-        .card.selected { border: 2px solid #3b82f6; transform: translateY(-15px); }
         .suit-red { color: #e53e3e; }
         .suit-black { color: #1a202c; }
         
@@ -76,21 +75,35 @@
         }
 
         #lobby-screen { z-index: 1000; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); }
+        
+        /* Экран Game Over */
+        #game-over-screen { z-index: 2000; background: rgba(0,0,0,0.9); backdrop-filter: blur(8px); }
     </style>
 </head>
 <body class="h-screen w-screen text-gray-800">
+
+    <!-- GAME OVER SCREEN -->
+    <div id="game-over-screen" class="fixed inset-0 flex items-center justify-center text-white hidden opacity-0 transition-opacity duration-500">
+        <div class="text-center p-8 max-w-lg w-full transform scale-90 transition-transform duration-500" id="game-over-content">
+            <h1 id="go-title" class="text-6xl font-black mb-4 text-red-500 drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)]">ВЫ ПРОИГРАЛИ!</h1>
+            <div id="go-message" class="text-xl text-gray-200 mb-8 italic font-serif">"..."</div>
+            
+            <button onclick="leaveGame()" class="bg-white text-gray-900 font-bold py-4 px-10 rounded-full hover:bg-gray-200 hover:scale-105 transition shadow-2xl text-xl">
+                В меню
+            </button>
+        </div>
+    </div>
 
     <!-- ЛОББИ -->
     <div id="lobby-screen" class="fixed inset-0 flex items-center justify-center text-white">
         <div class="bg-white text-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 relative overflow-hidden">
             <h1 class="text-3xl font-bold mb-2 text-center text-blue-800">Дурак</h1>
-            <p class="text-center text-gray-500 mb-6 text-sm">Карточная игра</p>
+            <p class="text-center text-gray-500 mb-6 text-sm">Pro Edition: Online & Offline</p>
             
             <div id="lobby-main" class="space-y-4">
-                <!-- ОФЛАЙН -->
                 <button onclick="startOfflineGame()" class="w-full bg-gradient-to-r from-green-500 to-green-700 text-white font-bold py-4 rounded-lg shadow-lg hover:from-green-600 hover:to-green-800 transition transform hover:scale-105 flex items-center justify-center gap-2">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    Играть с Ботом (Офлайн)
+                    Играть с Ботом
                 </button>
 
                 <div class="relative flex py-2 items-center">
@@ -114,14 +127,6 @@
                                class="flex-1 border-2 border-gray-300 p-2 rounded-lg text-center font-mono uppercase text-sm">
                         <button onclick="joinOnlineGame()" class="btn-primary py-2 text-sm">Войти</button>
                     </div>
-                </div>
-                
-                <!-- Ссылка на внешний сайт -->
-                <div class="pt-4 border-t border-gray-200 mt-4 text-center">
-                    <p class="text-xs text-gray-400 mb-2">Или перейдите на оригинальный сайт:</p>
-                    <a href="https://iezebel.github.io/web3.0durrak/" target="_blank" class="inline-block bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg text-sm transition">
-                        🔗 Открыть iezebel.github.io
-                    </a>
                 </div>
             </div>
 
@@ -152,7 +157,6 @@
             </div>
         </div>
 
-        <!-- Стол -->
         <div id="opponent-hand"></div>
         <div id="opponent-name" class="absolute top-16 left-1/2 transform -translate-x-1/2 text-white/70 text-sm font-bold bg-black/20 px-2 rounded">Соперник</div>
 
@@ -173,7 +177,6 @@
 
         <div id="player-hand"></div>
 
-        <!-- Тосты -->
         <div id="toast" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-6 py-3 rounded-xl pointer-events-none transition-all opacity-0 scale-90 z-[200]">
             Сообщение
         </div>
@@ -187,11 +190,9 @@
 
         // =========================================================================
         //  НАСТРОЙКИ СЕРВЕРА (FIREBASE)
-        //  Если вы хотите играть онлайн здесь, создайте проект на firebase.google.com
-        //  и вставьте свой конфиг ниже вместо 'null'.
+        //  Вставьте сюда свой конфиг для игры онлайн
         // =========================================================================
-        
-    const MY_CUSTOM_CONFIG = {
+        const MY_CUSTOM_CONFIG = {
   apiKey: "AIzaSyBlfCYqHw_uHxP6pyKOkW0QFsuHFw9_XyY",
   authDomain: "durakweb3.firebaseapp.com",
   projectId: "durakweb3",
@@ -199,16 +200,26 @@
   messagingSenderId: "306514193440",
   appId: "1:306514193440:web:79d78252da6ee29c40a045",
   measurementId: "G-69VNYN2Z20"
-}; 
+};
         
-      
+
+        const LOSER_JOKES = [
+            "Ну ты даешь... даже хлеб умнее играет.",
+            "Не расстраивайся, быть дураком - это призвание!",
+            "У тебя карты были крапленые, я уверен. Но ты все равно проиграл.",
+            "Бот просил передать, что ему было скучно.",
+            "В следующий раз попробуй играть с открытыми глазами.",
+            "Твой IQ равен количеству козырей в колоде.",
+            "Я видел, как голуби играют лучше."
+        ];
+
         // --- GLOBAL STATE ---
         let GAME_MODE = 'OFFLINE'; // 'ONLINE' or 'OFFLINE'
         let currentUser = { uid: 'player-offline' };
         let currentGameId = null;
         let unsubscribeGame = null;
         
-        let localState = null; // Текущее состояние игры
+        let localState = null;
         let botTimer = null;
 
         // --- FIREBASE INIT ---
@@ -218,19 +229,12 @@
         async function initFirebase() {
             try {
                 let fbConfig = null;
-
-                // 1. Проверяем, вставил ли пользователь свой конфиг вручную
                 if (MY_CUSTOM_CONFIG) {
                     fbConfig = MY_CUSTOM_CONFIG;
-                    console.log("Используем пользовательский конфиг");
-                } 
-                // 2. Иначе пробуем взять конфиг из среды (LLM Environment)
-                else if (typeof __firebase_config !== 'undefined') {
+                } else if (typeof __firebase_config !== 'undefined') {
                     fbConfig = JSON.parse(__firebase_config);
-                    console.log("Используем конфиг среды");
                 }
 
-                // Если конфига нет или он неполный (только ключ), онлайн не заработает
                 if (fbConfig && fbConfig.projectId) {
                     const app = initializeApp(fbConfig);
                     auth = getAuth(app);
@@ -238,7 +242,6 @@
                     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default';
                     gamesRef = collection(db, 'artifacts', appId, 'public', 'data', 'games');
                     
-                    // Авторизация
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         await signInWithCustomToken(auth, __initial_auth_token);
                     } else {
@@ -250,44 +253,39 @@
                             currentUser = user;
                             isFirebaseReady = true;
                             const statusEl = document.getElementById('auth-status');
-                            statusEl.innerText = "Сервер подключен (Готов к игре)";
+                            statusEl.innerText = "Сервер подключен";
                             statusEl.className = "text-xs text-center text-green-600 mb-2 font-bold";
-                            
                             document.getElementById('online-controls').classList.remove('opacity-50', 'pointer-events-none');
                         }
                     });
                 } else {
-                    console.log("Нет валидного конфига Firebase. Онлайн отключен.");
-                    document.getElementById('auth-status').innerText = "Для онлайна нужен конфиг (см. код)";
-                    document.getElementById('auth-status').className = "text-xs text-center text-red-400 mb-2";
+                    console.log("Онлайн не настроен (нет конфига)");
                 }
             } catch (e) {
                 console.error("Firebase Init Error:", e);
-                document.getElementById('auth-status').innerText = "Ошибка инициализации: " + e.message;
+                document.getElementById('auth-status').innerText = "Ошибка: " + e.message;
             }
         }
 
         initFirebase();
 
-        // --- LOBBY FUNCTIONS ---
+        // --- УПРАВЛЕНИЕ ЛОББИ ---
 
         window.startOfflineGame = () => {
             GAME_MODE = 'OFFLINE';
             currentUser = { uid: 'player' };
+            hideGameOver();
             
-            // Инициализируем локальное состояние
             const deck = createDeck();
             const trump = deck[0];
             const pHand = [];
             const bHand = [];
-            
             for(let i=0; i<6; i++) { pHand.push(deck.pop()); bHand.push(deck.pop()); }
 
-            // Определяем первый ход
             let pMin = 100, bMin = 100;
             pHand.forEach(c => { if(c.suit === trump.suit && c.value < pMin) pMin = c.value; });
             bHand.forEach(c => { if(c.suit === trump.suit && c.value < bMin) bMin = c.value; });
-            const playerFirst = pMin < bMin; // Если у бота нет козыря (100), а у игрока тоже (100) -> false (бот)
+            const playerFirst = pMin < bMin;
 
             localState = {
                 status: 'playing',
@@ -304,9 +302,8 @@
 
             showGameUI();
             renderGame(localState);
-            
-            if (localState.turn === 'bot') setTimeout(botTurn, 1000);
-        };
+            if (localState.turn === 'bot') startBotTimer();
+        }
 
         window.createOnlineGame = async () => {
             if (!isFirebaseReady) return showToast("Нет подключения к серверу");
@@ -348,7 +345,6 @@
             const data = snap.data();
             if (data.status !== 'waiting') return showToast("Игра занята");
 
-            // Deal logic
             const deck = [...data.deck];
             const h1 = [], h2 = [];
             for(let i=0; i<6; i++) { if(deck.length) h1.push(deck.pop()); if(deck.length) h2.push(deck.pop()); }
@@ -359,7 +355,7 @@
                 deck: deck,
                 [`hands.${data.hostId}`]: h1,
                 [`hands.${currentUser.uid}`]: h2,
-                attacker: data.hostId, // Хост ходит первым упрощенно
+                attacker: data.hostId, 
                 turn: data.hostId
             });
 
@@ -379,278 +375,182 @@
             });
         }
 
-        // --- CORE GAME RENDER & LOGIC ---
-
-        function renderGame(state) {
-            const myUid = GAME_MODE === 'OFFLINE' ? 'player' : currentUser.uid;
-            const oppUid = GAME_MODE === 'OFFLINE' ? 'bot' : (state.hostId === myUid ? state.joinerId : state.hostId);
-
-            // 1. Status Bar
-            const isMyTurn = state.turn === myUid;
-            const amIAttacker = state.attacker === myUid;
-            const badge = document.getElementById('status-badge');
-            
-            if (isMyTurn) {
-                badge.innerText = amIAttacker ? "Ваш ход: Атакуйте" : "Ваш ход: Отбивайтесь";
-                badge.className = "px-4 py-2 rounded-full text-sm font-bold shadow-lg transition-colors bg-green-600 text-white animate-pulse";
-            } else {
-                badge.innerText = "Ход противника...";
-                badge.className = "px-4 py-2 rounded-full text-sm font-bold shadow-lg transition-colors bg-gray-700 text-white";
-            }
-
-            // 2. Info
-            const trump = state.trumpCard;
-            const suitHtml = `<span class="${(trump.suit === 'hearts' || trump.suit === 'diamonds') ? 'text-red-500' : 'text-gray-900'}">${getSuitChar(trump.suit)}</span>`;
-            document.getElementById('trump-suit-display').innerHTML = suitHtml;
-            document.getElementById('deck-count').innerText = state.deck.length;
-
-            const trumpEl = document.getElementById('trump-card-el');
-            trumpEl.innerHTML = renderCardHTML(trump);
-            trumpEl.style.transform = 'rotate(90deg) translateX(30px)';
-            if (state.deck.length === 0) {
-                document.getElementById('deck-stack').classList.add('hidden');
-                trumpEl.style.opacity = '0.5';
-            } else {
-                document.getElementById('deck-stack').classList.remove('hidden');
-                trumpEl.style.opacity = '1';
-            }
-
-            // 3. Table
-            const tableEl = document.getElementById('game-table');
-            tableEl.innerHTML = '';
-            state.table.forEach(pair => {
-                const slot = document.createElement('div');
-                slot.className = 'table-slot';
-                
-                const att = document.createElement('div');
-                att.className = 'card';
-                att.innerHTML = renderCardHTML(pair.attack);
-                slot.appendChild(att);
-
-                if(pair.defend) {
-                    const def = document.createElement('div');
-                    def.className = 'card';
-                    def.style.top = '20px'; def.style.left = '20px'; def.style.zIndex = 10;
-                    def.innerHTML = renderCardHTML(pair.defend);
-                    slot.appendChild(def);
-                }
-                tableEl.appendChild(slot);
-            });
-
-            // 4. My Hand
-            const handEl = document.getElementById('player-hand');
-            handEl.innerHTML = '';
-            const myHand = state.hands[myUid] || [];
-            
-            // Sort
-            myHand.sort((a,b) => {
-                const trA = a.suit === state.trumpSuit;
-                const trB = b.suit === state.trumpSuit;
-                if(trA && !trB) return 1;
-                if(!trA && trB) return -1;
-                if(a.suit === b.suit) return a.value - b.value;
-                return a.suit.localeCompare(b.suit);
-            });
-
-            myHand.forEach(card => {
-                const wrap = document.createElement('div');
-                wrap.className = 'hand-card-wrapper';
-                const cDiv = document.createElement('div');
-                cDiv.className = 'card hover:ring-2 ring-blue-400';
-                cDiv.innerHTML = renderCardHTML(card);
-                cDiv.onclick = () => playerCardClick(card);
-                wrap.appendChild(cDiv);
-                handEl.appendChild(wrap);
-            });
-
-            // 5. Opponent Hand
-            const oppHandEl = document.getElementById('opponent-hand');
-            oppHandEl.innerHTML = '';
-            const oppCount = (state.hands[oppUid] || []).length;
-            for(let i=0; i<oppCount; i++) {
-                const back = document.createElement('div');
-                back.className = 'opponent-card-back';
-                oppHandEl.appendChild(back);
-            }
-
-            // 6. Buttons
-            const btnArea = document.getElementById('action-area');
-            const btn = document.getElementById('main-action-btn');
-            
-            if (state.table.length === 0) {
-                btnArea.classList.add('opacity-0', 'pointer-events-none');
-            } else if (isMyTurn) {
-                btnArea.classList.remove('opacity-0', 'pointer-events-none');
-                if (amIAttacker) {
-                    // Attack phase
-                    const allDefended = state.table.every(p => p.defend);
-                    if (allDefended) {
-                        btn.innerText = "Бито";
-                        btn.className = "btn-primary bg-green-600 hover:bg-green-700 text-lg px-8 py-3 shadow-green-500/50";
-                        btn.onclick = () => performAction('bito');
-                    } else {
-                        btnArea.classList.add('opacity-0', 'pointer-events-none'); // Wait for defender
-                    }
-                } else {
-                    // Defend phase
-                    btn.innerText = "Взять";
-                    btn.className = "btn-secondary bg-red-600 hover:bg-red-700 text-lg px-8 py-3 shadow-red-500/50";
-                    btn.onclick = () => performAction('take');
-                }
-            } else {
-                btnArea.classList.add('opacity-0', 'pointer-events-none');
-            }
-        }
-
-        // --- ACTIONS ---
+        // --- ОСНОВНАЯ ЛОГИКА (ОБЩАЯ ДЛЯ ОФЛАЙН И ОНЛАЙН) ---
 
         window.playerCardClick = (card) => {
             const state = localState;
             const myUid = GAME_MODE === 'OFFLINE' ? 'player' : currentUser.uid;
             
-            if (state.turn !== myUid) return showToast("Не ваш ход!");
-
+            // Проверки хода и роли
+            const isMyTurn = state.turn === myUid;
             const amIAttacker = state.attacker === myUid;
+            const matchesTable = state.table.some(p => p.attack.rank === card.rank || (p.defend && p.defend.rank === card.rank));
             
+            // Правило подкидывания: можно кидать, если я Атакующий И карта совпадает, даже если сейчас ход защитника
+            if (!isMyTurn && !(amIAttacker && matchesTable)) {
+                return showToast("Не ваш ход! Ждите.");
+            }
+
             if (amIAttacker) {
-                // Check if valid attack (match existing ranks)
-                if (state.table.length > 0) {
-                    const validRanks = new Set();
-                    state.table.forEach(p => { validRanks.add(p.attack.rank); if(p.defend) validRanks.add(p.defend.rank); });
-                    if (!validRanks.has(card.rank)) return showToast("Карта не подходит (ранг)");
-                }
-                if (state.table.length >= 6) return showToast("Стол полон");
+                // АТАКА / ПОДКИДЫВАНИЕ
+                if (state.table.length > 0 && !matchesTable) return showToast("Карта не совпадает по рангу");
+                if (state.table.length >= 6) return showToast("Стол полон (макс 6 карт)");
+                
+                // Если офлайн и мы подкидываем пока бот думает -> стоп таймер
+                if (GAME_MODE === 'OFFLINE' && botTimer) { clearTimeout(botTimer); botTimer = null; }
                 
                 applyMove(card, 'attack');
             } else {
-                // Defend
+                // ЗАЩИТА
+                if (!isMyTurn) return showToast("Ждите хода соперника");
+                
                 const pairIdx = state.table.findIndex(p => !p.defend);
-                if (pairIdx === -1) return; // All defended
+                if (pairIdx === -1) return; 
                 
                 const att = state.table[pairIdx].attack;
-                let beats = false;
-                if (card.suit === att.suit && card.value > att.value) beats = true;
-                else if (card.suit === state.trumpSuit && att.suit !== state.trumpSuit) beats = true;
-                
-                if (!beats) return showToast("Этой картой нельзя побить");
+                if (!canBeat(card, att, state.trumpSuit)) return showToast("Этой картой нельзя побить");
                 
                 applyMove(card, 'defend', pairIdx);
             }
         };
 
         window.performAction = (type) => {
-            if (GAME_MODE === 'OFFLINE') {
-                processOfflineAction(type);
-            } else {
-                processOnlineAction(type);
-            }
+            if (GAME_MODE === 'OFFLINE' && botTimer) clearTimeout(botTimer);
+            processAction(type);
         };
 
         async function applyMove(card, type, idx = -1) {
+            // Клонируем стейт для модификации (в онлайн просто соберем патч)
+            // Но здесь мы модифицируем локальный объект для расчетов
             const myUid = GAME_MODE === 'OFFLINE' ? 'player' : currentUser.uid;
+            const oppId = GAME_MODE === 'OFFLINE' ? 'bot' : (localState.hostId === myUid ? localState.joinerId : localState.hostId);
+
+            let newHands = { ...localState.hands };
+            newHands[myUid] = newHands[myUid].filter(c => !(c.rank===card.rank && c.suit===card.suit));
             
-            // Оптимистичное удаление из руки
-            localState.hands[myUid] = localState.hands[myUid].filter(c => !(c.rank===card.rank && c.suit===card.suit));
-            
+            let newTable = [...localState.table];
+            let newTurn = localState.turn;
+
             if (type === 'attack') {
-                localState.table.push({ attack: card, defend: null });
-                // Смена хода: если атаковал, ход переходит защитнику
-                const oppId = GAME_MODE==='OFFLINE' ? 'bot' : (localState.hostId===myUid ? localState.joinerId : localState.hostId);
-                localState.turn = oppId;
+                newTable.push({ attack: card, defend: null });
+                newTurn = oppId; // Передаем ход защитнику
+                if (GAME_MODE === 'OFFLINE') startBotTimer();
             } else {
-                localState.table[idx].defend = card;
-                // Смена хода: если отбился, ход возвращается атакующему (может подкинуть)
-                localState.turn = localState.attacker;
+                newTable[idx] = { ...newTable[idx], defend: card };
+                // Если есть еще неотбитые -> ход остается у защитника. Если всё отбито -> ход Атакующего (подкинуть или бито)
+                const hasUndefended = newTable.some(p => !p.defend);
+                if (!hasUndefended) {
+                    newTurn = localState.attacker;
+                    if (GAME_MODE === 'OFFLINE') startBotTimer();
+                }
             }
 
-            renderGame(localState);
-
+            // Применяем изменения
             if (GAME_MODE === 'ONLINE') {
                 await updateDoc(doc(gamesRef, currentGameId), {
-                    [`hands.${myUid}`]: localState.hands[myUid],
-                    table: localState.table,
-                    turn: localState.turn
+                    [`hands.${myUid}`]: newHands[myUid],
+                    table: newTable,
+                    turn: newTurn
                 });
             } else {
-                if (localState.turn === 'bot') setTimeout(botTurn, 1000);
+                localState.hands = newHands;
+                localState.table = newTable;
+                localState.turn = newTurn;
+                renderGame(localState);
             }
         }
 
-        // --- OFFLINE / BOT LOGIC ---
-
-        function processOfflineAction(action) {
-            const state = localState;
-            const oppId = 'bot';
-            const myId = 'player';
+        async function processAction(action) {
+            const myUid = GAME_MODE === 'OFFLINE' ? 'player' : currentUser.uid;
+            const oppId = GAME_MODE === 'OFFLINE' ? 'bot' : (localState.hostId === myUid ? localState.joinerId : localState.hostId);
             
+            // Данные для обновления
+            let d = [...localState.deck];
+            let h = JSON.parse(JSON.stringify(localState.hands)); // Deep copy simple
+            let t = [];
+            let newAttacker = localState.attacker;
+            let newTurn = localState.turn;
+
             if (action === 'bito') {
-                drawCards(myId, oppId);
-                state.table = [];
-                state.attacker = oppId; 
-                state.turn = oppId;
-                renderGame(state);
-                setTimeout(botTurn, 1000);
+                // Бито жмет Атакующий
+                // Добор карт: Сначала Атакующий, потом Защитник
+                [myUid, oppId].forEach(uid => {
+                    while(h[uid].length < 6 && d.length > 0) h[uid].push(d.pop());
+                });
+                newAttacker = oppId; // Смена ролей
+                newTurn = oppId;
+                if (GAME_MODE === 'OFFLINE') startBotTimer();
+
             } else if (action === 'take') {
-                takeCards(myId); // Игрок берет
-                drawCards(oppId); // Бот добирает
-                state.table = [];
-                state.attacker = oppId; // Бот снова атакует
-                state.turn = oppId;
-                renderGame(state);
-                setTimeout(botTurn, 1000);
+                // Взять жмет Защитник
+                let cardsToTake = [];
+                localState.table.forEach(p => { cardsToTake.push(p.attack); if(p.defend) cardsToTake.push(p.defend); });
+                h[myUid] = [...h[myUid], ...cardsToTake];
+                
+                // Атакующий (oppId) добирает
+                while(h[oppId].length < 6 && d.length > 0) h[oppId].push(d.pop());
+                
+                newAttacker = oppId; // Атакующий сохраняет инициативу
+                newTurn = oppId;
+                if (GAME_MODE === 'OFFLINE') startBotTimer();
             }
+
+            if (GAME_MODE === 'ONLINE') {
+                await updateDoc(doc(gamesRef, currentGameId), {
+                    deck: d, hands: h, table: t, attacker: newAttacker, turn: newTurn
+                });
+            } else {
+                localState.deck = d; localState.hands = h; localState.table = t;
+                localState.attacker = newAttacker; localState.turn = newTurn;
+                renderGame(localState);
+            }
+        }
+
+        // --- ЛОГИКА БОТА ---
+
+        function startBotTimer() {
+            if (botTimer) clearTimeout(botTimer);
+            botTimer = setTimeout(botTurn, 1000 + Math.random() * 500);
         }
 
         function botTurn() {
             if (!localState || GAME_MODE !== 'OFFLINE') return;
             const state = localState;
+            if (checkGameOver(state)) return;
+
             const botHand = state.hands['bot'];
             const amIAttacker = state.attacker === 'bot';
 
             if (amIAttacker) {
-                // АТАКА БОТА
+                // БОТ АТАКУЕТ
                 if (state.table.length === 0) {
-                    // Кидаем самую мелкую
                     const c = getLowestCard(botHand, state.trumpSuit);
                     botApplyMove(c, 'attack');
                 } else {
-                    // Подкидываем
+                    // Подкидывание
                     const ranks = new Set();
                     state.table.forEach(p => { ranks.add(p.attack.rank); if(p.defend) ranks.add(p.defend.rank); });
-                    const options = botHand.filter(c => ranks.has(c.rank));
+                    const options = botHand.filter(c => ranks.has(c.rank)).sort((a,b) => getCardPower(a, state.trumpSuit) - getCardPower(b, state.trumpSuit));
                     
-                    if (options.length > 0) {
-                        options.sort((a,b) => a.value - b.value);
+                    if (options.length > 0 && state.table.length < 6) {
                         botApplyMove(options[0], 'attack');
                     } else {
-                        // Бито
-                        botDoAction('bito');
+                        processAction('bito'); // Бот говорит Бито
                     }
                 }
             } else {
-                // ЗАЩИТА БОТА
+                // БОТ ЗАЩИЩАЕТСЯ
                 const pairIdx = state.table.findIndex(p => !p.defend);
-                if (pairIdx === -1) return; // Ждем атакующего
-                
-                const att = state.table[pairIdx].attack;
-                // Ищем чем побить
-                let beaters = botHand.filter(c => {
-                    if (c.suit === att.suit) return c.value > att.value;
-                    if (c.suit === state.trumpSuit && att.suit !== state.trumpSuit) return true;
-                    return false;
-                });
+                if (pairIdx === -1) return; // Всё отбито, ждет действий игрока
 
+                const att = state.table[pairIdx].attack;
+                let beaters = botHand.filter(c => canBeat(c, att, state.trumpSuit));
+                
                 if (beaters.length > 0) {
-                    // Бьем самой дешевой
-                    beaters.sort((a,b) => {
-                        const trA = a.suit === state.trumpSuit ? 1 : 0;
-                        const trB = b.suit === state.trumpSuit ? 1 : 0;
-                        if (trA !== trB) return trA - trB;
-                        return a.value - b.value;
-                    });
+                    beaters.sort((a,b) => getCardPower(a, state.trumpSuit) - getCardPower(b, state.trumpSuit));
                     botApplyMove(beaters[0], 'defend', pairIdx);
                 } else {
-                    botDoAction('take');
+                    processAction('take'); // Бот берет
                 }
             }
         }
@@ -658,141 +558,164 @@
         function botApplyMove(card, type, idx) {
             const state = localState;
             state.hands['bot'] = state.hands['bot'].filter(c => c !== card);
-            
             if (type === 'attack') {
                 state.table.push({ attack: card, defend: null });
                 state.turn = 'player';
             } else {
                 state.table[idx].defend = card;
-                state.turn = 'bot'; // Вернули ход атакующему боту
+                const hasUndefended = state.table.some(p => !p.defend);
+                if (hasUndefended) {
+                    state.turn = 'bot'; startBotTimer();
+                } else {
+                    state.turn = 'player';
+                }
             }
             renderGame(state);
-            // Если бот отбился, он тут же проверяет может ли подкинуть (через задержку)
-            if (type === 'defend') setTimeout(botTurn, 1000);
         }
 
-        function botDoAction(action) {
-            const state = localState;
-            if (action === 'bito') {
-                showToast("Бот: Бито!");
-                drawCards('bot', 'player');
-                state.table = [];
-                state.attacker = 'player';
-                state.turn = 'player';
-                renderGame(state);
-            } else if (action === 'take') {
-                showToast("Бот берет карты");
-                takeCards('bot');
-                drawCards('player');
-                state.table = [];
-                state.attacker = 'player';
-                state.turn = 'player';
-                renderGame(state);
+        // --- УТИЛИТЫ И UI ---
+
+        function checkGameOver(state) {
+            if (state.deck.length === 0) {
+                const myUid = GAME_MODE === 'OFFLINE' ? 'player' : currentUser.uid;
+                const oppUid = GAME_MODE === 'OFFLINE' ? 'bot' : (state.hostId === myUid ? state.joinerId : state.hostId);
+                const myH = state.hands[myUid].length;
+                const oppH = state.hands[oppUid].length;
+                
+                if (myH === 0 && oppH === 0) { showGameOver('draw'); return true; }
+                if (myH === 0) { showGameOver('win'); return true; }
+                if (oppH === 0) { showGameOver('lose'); return true; }
             }
+            return false;
         }
 
-        // --- ONLINE ACTIONS ---
-        async function processOnlineAction(action) {
-            const myUid = currentUser.uid;
-            const oppUid = localState.hostId === myUid ? localState.joinerId : localState.hostId;
-            const ref = doc(gamesRef, currentGameId);
+        function renderGame(state) {
+            if (checkGameOver(state)) return;
+
+            const myUid = GAME_MODE === 'OFFLINE' ? 'player' : currentUser.uid;
+            const oppUid = GAME_MODE === 'OFFLINE' ? 'bot' : (state.hostId === myUid ? state.joinerId : state.hostId);
+            const isMyTurn = state.turn === myUid;
+            const amIAttacker = state.attacker === myUid;
             
-            if (action === 'bito') {
-                // Локально считаем логику добора
-                let d = [...localState.deck];
-                let h = { ...localState.hands };
-                const uids = [localState.attacker, (localState.attacker===myUid?oppUid:myUid)]; // Сначала атакующий
-                
-                uids.forEach(uid => {
-                    while(h[uid].length < 6 && d.length > 0) h[uid].push(d.pop());
+            // Badge
+            const badge = document.getElementById('status-badge');
+            if (isMyTurn) {
+                badge.innerText = amIAttacker ? "Ваш ход: Атакуйте" : "Ваш ход: Отбивайтесь";
+                badge.className = "px-4 py-2 rounded-full text-sm font-bold shadow-lg bg-green-600 text-white animate-pulse";
+            } else {
+                if (amIAttacker) {
+                    badge.innerText = "Подкиньте или нажмите Бито";
+                    badge.className = "px-4 py-2 rounded-full text-sm font-bold shadow-lg bg-yellow-600 text-white";
+                } else {
+                    badge.innerText = "Соперник думает...";
+                    badge.className = "px-4 py-2 rounded-full text-sm font-bold shadow-lg bg-gray-700 text-white";
+                }
+            }
+
+            // Cards Info
+            const trump = state.trumpCard;
+            document.getElementById('trump-suit-display').innerHTML = `<span class="${(trump.suit==='hearts'||trump.suit==='diamonds')?'text-red-500':'text-gray-900'}">${getSuitChar(trump.suit)}</span>`;
+            document.getElementById('deck-count').innerText = state.deck.length;
+            const tEl = document.getElementById('trump-card-el');
+            tEl.innerHTML = renderCardHTML(trump);
+            tEl.style.transform = 'rotate(90deg) translateX(30px)';
+            if(state.deck.length===0) { document.getElementById('deck-stack').classList.add('hidden'); tEl.style.opacity='0.5'; }
+            else { document.getElementById('deck-stack').classList.remove('hidden'); tEl.style.opacity='1'; }
+
+            // Table
+            const tableEl = document.getElementById('game-table');
+            tableEl.innerHTML = '';
+            state.table.forEach(pair => {
+                const slot = document.createElement('div'); slot.className = 'table-slot';
+                const att = document.createElement('div'); att.className = 'card'; att.innerHTML = renderCardHTML(pair.attack);
+                slot.appendChild(att);
+                if(pair.defend) {
+                    const def = document.createElement('div'); def.className = 'card'; def.style.top='20px'; def.style.left='20px'; def.style.zIndex=10;
+                    def.innerHTML = renderCardHTML(pair.defend); slot.appendChild(def);
+                }
+                tableEl.appendChild(slot);
+            });
+
+            // Hands
+            const handEl = document.getElementById('player-hand');
+            handEl.innerHTML = '';
+            state.hands[myUid].sort((a,b) => getCardPower(a, state.trumpSuit) - getCardPower(b, state.trumpSuit))
+                .forEach(card => {
+                    const w = document.createElement('div'); w.className = 'hand-card-wrapper';
+                    const c = document.createElement('div'); c.className = 'card hover:ring-2 ring-blue-400';
+                    c.innerHTML = renderCardHTML(card);
+                    c.onclick = () => playerCardClick(card);
+                    w.appendChild(c); handEl.appendChild(w);
                 });
 
-                await updateDoc(ref, {
-                    table: [], deck: d, hands: h,
-                    attacker: oppUid, turn: oppUid
-                });
+            const oppHandEl = document.getElementById('opponent-hand');
+            oppHandEl.innerHTML = '';
+            for(let i=0; i<state.hands[oppUid].length; i++) {
+                const b = document.createElement('div'); b.className = 'opponent-card-back'; oppHandEl.appendChild(b);
+            }
 
-            } else if (action === 'take') {
-                let d = [...localState.deck];
-                let h = { ...localState.hands };
-                let cards = [];
-                localState.table.forEach(p => { cards.push(p.attack); if(p.defend) cards.push(p.defend); });
-                
-                h[myUid] = [...h[myUid], ...cards]; // Тот кто нажал взять
-                while(h[oppUid].length < 6 && d.length > 0) h[oppUid].push(d.pop()); // Атакующий добирает
+            // Buttons
+            const btnArea = document.getElementById('action-area');
+            const btn = document.getElementById('main-action-btn');
+            btnArea.classList.add('opacity-0', 'pointer-events-none');
 
-                await updateDoc(ref, {
-                    table: [], deck: d, hands: h,
-                    attacker: oppUid, turn: oppUid
-                });
+            if (state.table.length > 0) {
+                if (amIAttacker) {
+                    const allDefended = state.table.every(p => p.defend);
+                    if (allDefended) {
+                        btnArea.classList.remove('opacity-0', 'pointer-events-none');
+                        btn.innerText = "Бито";
+                        btn.className = "btn-primary bg-green-600 hover:bg-green-700 text-lg px-8 py-3 shadow-green-500/50";
+                        btn.onclick = () => performAction('bito');
+                    }
+                } else {
+                    if (isMyTurn) {
+                        btnArea.classList.remove('opacity-0', 'pointer-events-none');
+                        btn.innerText = "Взять";
+                        btn.className = "btn-secondary bg-red-600 hover:bg-red-700 text-lg px-8 py-3 shadow-red-500/50";
+                        btn.onclick = () => performAction('take');
+                    }
+                }
             }
         }
 
-        // --- UTILS ---
+        // --- HELPERS ---
+        function canBeat(c, a, t) {
+            if(c.suit===a.suit) return c.value>a.value;
+            if(c.suit===t && a.suit!==t) return true;
+            return false;
+        }
+        function getCardPower(c, t) { return c.value + (c.suit===t?20:0); }
+        function getLowestCard(h, t) { if(!h.length)return null; return h.reduce((p,c)=>getCardPower(p,t)<getCardPower(c,t)?p:c); }
         
-        function drawCards(attId, defId) { // для офлайна
-            const state = localState;
-            // Порядок: Сначала атакующий, потом защитник (упрощенно)
-            [attId, defId].forEach(id => {
-                if (!id) return;
-                while(state.hands[id].length < 6 && state.deck.length > 0) state.hands[id].push(state.deck.pop());
-            });
-        }
-
-        function takeCards(takerId) {
-            const state = localState;
-            state.table.forEach(p => {
-                state.hands[takerId].push(p.attack);
-                if(p.defend) state.hands[takerId].push(p.defend);
-            });
-        }
-
-        function getLowestCard(hand, trumpSuit) {
-            return hand.reduce((p, c) => {
-                const trP = p.suit===trumpSuit?1:0;
-                const trC = c.suit===trumpSuit?1:0;
-                if(trP !== trC) return trP < trC ? p : c;
-                return p.value < c.value ? p : c;
-            });
+        function showGameOver(res) {
+            const sc = document.getElementById('game-over-screen');
+            const ti = document.getElementById('go-title');
+            const ms = document.getElementById('go-message');
+            const co = document.getElementById('game-over-content');
+            sc.classList.remove('hidden');
+            setTimeout(()=>{sc.classList.remove('opacity-0'); co.classList.remove('scale-90'); co.classList.add('scale-100');},50);
+            if(res==='win'){ti.innerText="ПОБЕДА!";ti.className="text-6xl font-black mb-4 text-green-500";ms.innerText="Красава!";}
+            else if(res==='lose'){ti.innerText="ВЫ ПРОИГРАЛИ";ti.className="text-6xl font-black mb-4 text-red-600";ms.innerText=`"${LOSER_JOKES[Math.floor(Math.random()*LOSER_JOKES.length)]}"`;}
+            else{ti.innerText="НИЧЬЯ";ti.className="text-6xl font-black mb-4 text-yellow-400";ms.innerText="Мир!";}
         }
 
         function createDeck() {
-            const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
-            const ranks = ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-            const values = { '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
-            let d = [];
-            for (let s of suits) for (let r of ranks) d.push({ suit: s, rank: r, value: values[r] });
-            for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; }
+            const s=['hearts','diamonds','clubs','spades'], r=['6','7','8','9','10','J','Q','K','A'], v={'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14};
+            let d=[]; for(let su of s)for(let ra of r)d.push({suit:su,rank:ra,value:v[ra]});
+            for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}
             return d;
         }
-
-        function renderCardHTML(card) {
-            const color = (card.suit === 'hearts' || card.suit === 'diamonds') ? 'suit-red' : 'suit-black';
-            return `<div class="text-left font-bold text-sm leading-none ${color}">${card.rank}</div>
-                    <div class="flex-grow flex items-center justify-center text-3xl ${color}">${getSuitChar(card.suit)}</div>
-                    <div class="text-right font-bold text-sm leading-none transform rotate-180 ${color}">${card.rank}</div>`;
+        function renderCardHTML(c) {
+            const col=(c.suit==='hearts'||c.suit==='diamonds')?'suit-red':'suit-black';
+            return `<div class="text-left font-bold text-sm leading-none ${col}">${c.rank}</div><div class="flex-grow flex items-center justify-center text-3xl ${col}">${getSuitChar(c.suit)}</div><div class="text-right font-bold text-sm leading-none transform rotate-180 ${col}">${c.rank}</div>`;
         }
-        function getSuitChar(s) { return { 'hearts': '♥', 'diamonds': '♦', 'clubs': '♣', 'spades': '♠' }[s]; }
-
-        window.showGameUI = () => {
-            document.getElementById('lobby-screen').classList.add('hidden');
-            document.getElementById('game-ui').classList.remove('hidden');
-        };
-        window.leaveGame = () => {
-            if (unsubscribeGame) unsubscribeGame();
-            document.getElementById('game-ui').classList.add('hidden');
-            document.getElementById('lobby-screen').classList.remove('hidden');
-            document.getElementById('lobby-main').classList.remove('hidden');
-            document.getElementById('waiting-room').classList.add('hidden');
-            localState = null;
-        };
-        window.copyId = () => { navigator.clipboard.writeText(currentGameId); showToast("ID Скопирован"); }
-        window.showToast = (m) => {
-            const t = document.getElementById('toast');
-            t.innerText = m; t.classList.remove('opacity-0', 'scale-90');
-            setTimeout(() => t.classList.add('opacity-0', 'scale-90'), 2000);
-        };
+        function getSuitChar(s) { return {'hearts':'♥','diamonds':'♦','clubs':'♣','spades':'♠'}[s]; }
+        window.hideGameOver=()=>{document.getElementById('game-over-screen').classList.add('hidden','opacity-0');}
+        window.showGameUI=()=>{document.getElementById('lobby-screen').classList.add('hidden');document.getElementById('game-ui').classList.remove('hidden');}
+        window.leaveGame=()=>{if(unsubscribeGame)unsubscribeGame();location.reload();}
+        window.copyId=()=>{navigator.clipboard.writeText(currentGameId);showToast("ID скопирован");}
+        window.showToast=(m)=>{const t=document.getElementById('toast');t.innerText=m;t.classList.remove('opacity-0','scale-90');setTimeout(()=>t.classList.add('opacity-0','scale-90'),2000);}
     </script>
 </body>
 </html>
-
