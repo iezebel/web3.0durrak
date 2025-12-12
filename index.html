@@ -5,23 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Durak Online</title>
     
-    <!-- Telegram WebApp -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
-    <!-- Firebase SDK -->
+    <!-- Используем стабильную версию Firebase Compat -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <style>
-        /* --- СТИЛИ ИНТЕРФЕЙСА --- */
+        /* --- СТИЛИ --- */
         :root {
             --bg-color: #2a5c32;
             --bg-pattern: #1a3c22;
-            --card-width: 70px;
-            --card-height: 100px;
             --btn-color: #ffcc00;
-            --btn-shadow: #c29d00;
         }
 
         body {
@@ -29,33 +25,25 @@
             background-color: var(--bg-color);
             background-image: radial-gradient(circle at center, var(--bg-color) 0%, var(--bg-pattern) 100%);
             color: white;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, sans-serif;
             overflow: hidden;
             display: flex; flex-direction: column;
             height: 100vh;
             user-select: none; -webkit-user-select: none;
         }
 
-        /* Экран меню */
         #menu-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(20, 40, 25, 0.95);
             z-index: 2000;
             display: flex; flex-direction: column;
             justify-content: center; align-items: center;
-            gap: 20px;
-            backdrop-filter: blur(5px);
+            gap: 15px;
         }
 
         .menu-title {
             font-size: 42px; font-weight: 900; color: var(--btn-color);
-            margin-bottom: 30px; text-transform: uppercase;
-            text-shadow: 0 4px 0 var(--btn-shadow);
-        }
-
-        .input-group {
-            display: flex; flex-direction: column; gap: 15px;
-            width: 80%; max-width: 300px;
+            margin-bottom: 20px; text-transform: uppercase;
         }
 
         input {
@@ -63,20 +51,40 @@
             border: 2px solid rgba(255,255,255,0.2);
             background: rgba(0,0,0,0.3);
             color: white; font-size: 18px; text-align: center;
-            width: 100%; box-sizing: border-box; outline: none; transition: 0.3s;
+            width: 250px; outline: none; margin-bottom: 10px;
         }
-        input:focus { border-color: var(--btn-color); background: rgba(0,0,0,0.5); }
 
         .menu-btn {
             background: var(--btn-color); color: #2e2e2e;
-            border: none; padding: 15px 0; border-radius: 12px;
+            border: none; padding: 15px 40px; border-radius: 12px;
             font-size: 18px; font-weight: 800; cursor: pointer;
-            box-shadow: 0 4px 0 var(--btn-shadow);
-            transition: transform 0.1s; width: 100%; text-transform: uppercase;
+            width: 280px; text-transform: uppercase;
+            box-shadow: 0 4px 0 #c29d00;
         }
         .menu-btn:active { transform: translateY(4px); box-shadow: none; }
+        .menu-btn:disabled { background: #555; color: #888; box-shadow: none; cursor: wait; }
 
-        .join-row { display: flex; gap: 10px; width: 100%; }
+        .row { display: flex; gap: 10px; width: 280px; justify-content: center;}
+
+        /* КОНСОЛЬ ОТЛАДКИ (чтобы видеть ошибки) */
+        #debug-console {
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #00ff00;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            height: 150px;
+            overflow-y: auto;
+            text-align: left;
+            border: 1px solid #333;
+        }
+        .log-err { color: #ff5555; }
+        .log-ok { color: #55ff55; }
+        .log-info { color: #aaa; }
 
         /* Игровой экран */
         #game-screen {
@@ -84,193 +92,83 @@
             flex-direction: column; height: 100%;
         }
 
-        .top-bar {
-            padding: 10px 15px; display: flex;
-            justify-content: space-between; align-items: center;
-            background: rgba(0,0,0,0.3); font-size: 14px; height: 40px;
+        /* Карты */
+        .card {
+            width: 70px; height: 100px;
+            background: white; border-radius: 8px; color: black;
+            position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            margin-right: -25px; cursor: pointer;
         }
+        .card.red { color: #d40000; }
+        .card-top-left { position: absolute; top: 4px; left: 4px; font-size: 14px; line-height: 1; text-align: center; }
+        .card-bottom-right { position: absolute; bottom: 4px; right: 4px; font-size: 14px; line-height: 1; text-align: center; transform: rotate(180deg); }
+        .card-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 32px; }
+        .card-back { background: #4a7c59; border: 2px solid white; background-image: repeating-linear-gradient(45deg, #4a7c59 0, #4a7c59 10px, #3b6346 10px, #3b6346 20px); }
 
-        .game-code {
-            font-family: monospace; background: rgba(255,255,255,0.15);
-            padding: 4px 8px; border-radius: 6px; cursor: pointer;
-            font-weight: bold;
-        }
-
-        #game-area {
-            flex: 1; position: relative; display: flex;
-            flex-direction: column; justify-content: center; align-items: center;
-        }
-
-        /* Рука соперника */
         .hand { display: flex; justify-content: center; height: 110px; width: 100%; position: relative; }
         .opponent-hand { margin-top: 10px; }
+        .player-hand { margin-bottom: 80px; overflow-x: auto; padding: 0 20px; justify-content: flex-start; }
+        .table-area { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; }
+        .table-slots { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; padding-left: 80px;}
+        .slot { width: 70px; height: 100px; position: relative; }
+        .slot .card { position: absolute; top: 0; left: 0; }
+        .slot .defending { top: 15px; left: 15px; transform: rotate(15deg); z-index: 10; }
         
-        /* Стол и Колода */
-        .table-area {
-            flex: 1; width: 100%; display: flex;
-            justify-content: center; align-items: center;
-            padding-left: 80px; box-sizing: border-box;
-        }
-        .deck-area {
-            position: absolute; left: 15px; top: 50%;
-            transform: translateY(-50%); z-index: 5;
-        }
-        .trump-card-container {
-            position: relative; width: var(--card-width); height: var(--card-height);
-            transform: rotate(90deg); margin-right: -40px; margin-left: -10px; z-index: 1;
-        }
-        .deck-stack {
-            width: var(--card-width); height: var(--card-height);
-            background: #1a3c22; border: 2px solid #fff; border-radius: 6px; z-index: 2;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 20px; font-weight: bold;
-            background-image: repeating-linear-gradient(45deg, #2e5735 0, #2e5735 5px, #1a3c22 5px, #1a3c22 10px);
-            box-shadow: -2px 2px 5px rgba(0,0,0,0.5);
-        }
+        .deck-area { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); }
+        .deck-stack { width: 70px; height: 100px; background: #1a3c22; border: 2px solid white; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 20px; z-index: 2; position: relative;}
+        .trump-card-container { position: absolute; top: 0; left: 20px; width: 70px; height: 100px; transform: rotate(90deg) translateX(-20px); z-index: 1; }
 
-        .table-slots { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; }
-        .slot { width: var(--card-width); height: var(--card-height); position: relative; }
-        .slot .card { position: absolute; top: 0; left: 0; transition: transform 0.2s; }
-        .slot .defending {
-            top: 15px; left: 15px; transform: rotate(15deg);
-            z-index: 10; box-shadow: 2px 2px 5px rgba(0,0,0,0.4);
-        }
-
-        /* Карты игрока */
-        .player-hand {
-            margin-bottom: 80px; align-items: flex-end;
-            padding-bottom: 10px; overflow-x: auto;
-            padding-left: 20px; padding-right: 20px;
-            justify-content: flex-start;
-        }
-        .player-hand::-webkit-scrollbar { display: none; }
-
-        /* --- НОВЫЙ ДИЗАЙН КАРТЫ --- */
-        .card {
-            width: var(--card-width); height: var(--card-height);
-            background: white; border-radius: 8px; color: black;
-            position: relative; /* Важно для абсолютного позиционирования углов */
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3); cursor: pointer;
-            flex-shrink: 0; margin-right: -25px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-weight: bold;
-        }
-        .card:last-child { margin-right: 0; }
-        .player-hand .card:hover { transform: translateY(-15px); z-index: 100; }
-        
-        .card.red { color: #d40000; }
-        .card.black { color: #222; }
-
-        /* Углы карты */
-        .card-top-left {
-            position: absolute;
-            top: 4px; left: 4px;
-            font-size: 14px;
-            line-height: 1;
-            display: flex; flex-direction: column; align-items: center;
-        }
-
-        .card-bottom-right {
-            position: absolute;
-            bottom: 4px; right: 4px;
-            font-size: 14px;
-            line-height: 1;
-            display: flex; flex-direction: column; align-items: center;
-            transform: rotate(180deg);
-        }
-
-        .card-center {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 34px;
-        }
-
-        .card-back {
-            background: #4a7c59;
-            background-image: repeating-linear-gradient(45deg, #4a7c59 0, #4a7c59 10px, #3b6346 10px, #3b6346 20px);
-            border: 2px solid #fff;
-        }
-
-        /* Кнопки управления */
-        .controls {
-            position: absolute; bottom: 20px; width: 100%;
-            display: flex; justify-content: center; z-index: 100;
-            pointer-events: none;
-        }
-        .game-btn {
-            pointer-events: auto; background: var(--btn-color);
-            border: none; padding: 12px 40px; border-radius: 30px;
-            font-size: 18px; font-weight: 800; color: #333;
-            box-shadow: 0 4px #c29d00; cursor: pointer; text-transform: uppercase;
-            transition: 0.1s;
-        }
+        .top-bar { padding: 10px; background: rgba(0,0,0,0.3); display: flex; justify-content: space-between; }
+        .controls { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: center; pointer-events: none; }
+        .game-btn { pointer-events: auto; background: var(--btn-color); border: none; padding: 12px 40px; border-radius: 30px; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #c29d00; }
         .game-btn:active { transform: translateY(4px); box-shadow: none; }
-        .game-btn:disabled { background: #888; color: #ccc; box-shadow: none; transform: translateY(4px); cursor: not-allowed; }
-        .btn-take { background: #ff4d4d; color: white; box-shadow: 0 4px #b30000; }
-        .btn-take:active { box-shadow: none; }
-
-        .status-msg {
-            position: absolute; top: 40%; left: 0; width: 100%;
-            text-align: center; font-size: 22px; font-weight: bold;
-            color: white; padding: 8px 0; background: rgba(0,0,0,0.3);
-            backdrop-filter: blur(2px); pointer-events: none; z-index: 50;
-        }
-        #error-msg { color: #ff6b6b; font-weight: bold; margin-top: 10px; min-height: 20px; text-align: center; }
-        .loader {
-            border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid var(--btn-color);
-            border-radius: 50%; width: 30px; height: 30px;
-            animation: spin 1s linear infinite; display: none;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .game-btn:disabled { background: #888; color: #ccc; cursor: not-allowed; }
+        .status-msg { position: absolute; top: 40%; width: 100%; text-align: center; background: rgba(0,0,0,0.5); padding: 10px; font-size: 20px; font-weight: bold; display: none; }
     </style>
 </head>
 <body>
 
-    <!-- ЭКРАН МЕНЮ -->
+    <!-- МЕНЮ С ЛОГАМИ -->
     <div id="menu-screen">
         <div class="menu-title">Durak Online</div>
         
-        <div class="input-group">
-            <input type="text" id="player-name" placeholder="Ваше имя" maxlength="12">
-            <button class="menu-btn" onclick="createGame()">Создать игру</button>
-            
-            <div class="join-row">
-                <input type="text" id="join-code" placeholder="Код" style="width: 40%; text-transform: uppercase;">
-                <button class="menu-btn" onclick="joinGameInput()" style="width: 60%;">Войти</button>
-            </div>
+        <input type="text" id="player-name" placeholder="Ваше имя" maxlength="12">
+        
+        <button id="btn-create" class="menu-btn" onclick="createGame()" disabled>Загрузка...</button>
+        
+        <div class="row">
+            <input type="text" id="join-code" placeholder="Код" style="width: 100px; margin:0;">
+            <button id="btn-join" class="menu-btn" onclick="joinGameInput()" style="width: 160px;" disabled>Войти</button>
         </div>
 
-        <div id="error-msg"></div>
-        <div class="loader" id="menu-loader"></div>
-        <div style="font-size:12px; color:#aaa; margin-top:20px;">v4.1 UI Fix • Firebase: durakweb3</div>
+        <div id="debug-console">
+            <div class="log-info">Инициализация системы...</div>
+        </div>
     </div>
 
-    <!-- ИГРОВОЙ ЭКРАН -->
+    <!-- ИГРА -->
     <div id="game-screen">
         <div class="top-bar">
-            <div><span style="opacity:0.7">Вы:</span> <b id="ui-my-name">...</b></div>
-            <div onclick="copyCode()" class="game-code" title="Скопировать">ID: <span id="ui-game-code">...</span> 📋</div>
-            <div><span style="opacity:0.7">Враг:</span> <b id="ui-opp-name">...</b></div>
+            <div>Я: <b id="ui-my-name">...</b></div>
+            <div onclick="copyCode()" style="cursor:pointer; background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:4px;">ID: <span id="ui-game-code">...</span></div>
+            <div>Враг: <b id="ui-opp-name">...</b></div>
         </div>
 
-        <div id="game-area">
-            <div class="hand opponent-hand" id="opponent-hand"></div>
-
-            <div class="table-area">
-                <div class="deck-area">
-                    <div id="trump-placeholder"></div>
-                    <div class="deck-stack" id="deck-count">36</div>
-                </div>
-                <div class="table-slots" id="table"></div>
+        <div class="table-area">
+            <div class="deck-area">
+                <div id="trump-placeholder"></div>
+                <div class="deck-stack" id="deck-count"></div>
             </div>
+            <div class="table-slots" id="table"></div>
+        </div>
 
-            <div class="status-msg" id="status-display" style="display:none;"></div>
-            <div class="hand player-hand" id="player-hand"></div>
+        <div class="status-msg" id="status-display"></div>
 
-            <div class="controls">
-                <button id="btn-action" class="game-btn" onclick="doAction()" disabled>...</button>
-            </div>
+        <div class="hand opponent-hand" id="opponent-hand"></div>
+        <div class="hand player-hand" id="player-hand"></div>
+
+        <div class="controls">
+            <button id="btn-action" class="game-btn" onclick="doAction()">...</button>
         </div>
     </div>
 
@@ -278,165 +176,158 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    // ==========================================
-    // 1. НАСТРОЙКА FIREBASE
-    // ==========================================
-    
-    // ВАШИ КЛЮЧИ (durakweb3)
+    // --- ФУНКЦИЯ ЛОГИРОВАНИЯ ---
+    function log(msg, type='info') {
+        const consoleEl = document.getElementById('debug-console');
+        const line = document.createElement('div');
+        line.className = `log-${type}`;
+        line.innerText = `> ${msg}`;
+        consoleEl.appendChild(line);
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+        console.log(`[${type.toUpperCase()}] ${msg}`);
+    }
+
+    // --- КОНФИГУРАЦИЯ ---
     let firebaseConfig = {
         apiKey: "AIzaSyBlFCYqHw_uHxP6pyKOkW0QFsuHFw9_XyY",
         authDomain: "durakweb3.firebaseapp.com",
         projectId: "durakweb3",
         storageBucket: "durakweb3.firebasestorage.app",
         messagingSenderId: "306514193440",
-        appId: "1:306514193440:web:79d78252da6ee29c40a045",
-        measurementId: "G-69VNYN2Z20"
+        appId: "1:306514193440:web:79d78252da6ee29c40a045"
     };
 
     if (typeof __firebase_config !== 'undefined') {
         firebaseConfig = JSON.parse(__firebase_config);
+        log("Используется конфиг редактора", 'info');
+    } else {
+        log("Используется конфиг DurakWeb3", 'info');
     }
 
+    // --- ИНИЦИАЛИЗАЦИЯ ---
     let app, auth, db;
+    let myId = null;
+    let myName = "";
+    let gameId = null;
+    let gameState = null;
+
     try {
         app = firebase.initializeApp(firebaseConfig);
         auth = firebase.auth();
         db = firebase.firestore();
-        console.log("Firebase initialized");
+        log("Firebase SDK загружен", 'ok');
     } catch(e) {
-        console.error("Firebase Init Error:", e);
-        document.getElementById('error-msg').innerText = "Ошибка старта Firebase.";
+        log("Ошибка иниц. Firebase: " + e.message, 'err');
     }
 
-    let myId = null;
-    let myName = "";
-    let gameId = null;
-    let unsubscribe = null;
-    let gameState = null;
-
-    const SUITS = ['♠', '♣', '♦', '♥'];
-    const RANKS = ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-    const VALUES = { '6':6, '7':7, '8':8, '9':9, '10':10, 'J':11, 'Q':12, 'K':13, 'A':14 };
-
-    // ==========================================
-    // 2. ВХОД
-    // ==========================================
+    // --- ВХОД ---
     (async () => {
+        log("Попытка входа...", 'info');
         try {
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                 await auth.signInWithCustomToken(__initial_auth_token);
+                log("Вход по токену успешен", 'ok');
             } else {
                 await auth.signInAnonymously();
+                log("Анонимный вход выполнен", 'ok');
             }
-            
-            auth.onAuthStateChanged((user) => {
-                if (user) {
-                    myId = user.uid;
-                    const savedName = localStorage.getItem('durak_name');
-                    if (savedName) document.getElementById('player-name').value = savedName;
-                }
-            });
         } catch (e) {
-            document.getElementById('error-msg').innerText = "Ошибка входа.";
+            log("ОШИБКА ВХОДА: " + e.message, 'err');
+            log("Совет: Включите 'Anonymous' в Firebase Console", 'info');
+            log("Совет: Не запускайте файл просто так, используйте сервер", 'info');
         }
     })();
 
-    // ==========================================
-    // 3. УПРАВЛЕНИЕ ИГРОЙ
-    // ==========================================
-
-    function getGameCollection() {
-        if (typeof __app_id !== 'undefined') {
-            return db.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('durak_games');
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            myId = user.uid;
+            log("ID пользователя: " + myId.slice(0,5)+"...", 'ok');
+            
+            // Разблокируем кнопки
+            document.getElementById('btn-create').disabled = false;
+            document.getElementById('btn-create').innerText = "Создать игру";
+            document.getElementById('btn-join').disabled = false;
+            
+            const savedName = localStorage.getItem('durak_name');
+            if (savedName) document.getElementById('player-name').value = savedName;
         } else {
-            return db.collection('durak_games');
+            log("Пользователь вышел", 'info');
         }
-    }
+    });
 
-    function toggleLoader(show) {
-        document.getElementById('menu-loader').style.display = show ? 'block' : 'none';
-    }
+    // --- ФУНКЦИИ ИГРЫ ---
     
-    function showError(msg) {
-        const el = document.getElementById('error-msg');
-        el.innerText = msg;
-        setTimeout(() => el.innerText = '', 5000);
+    // Определяем коллекцию
+    function getGameRef(id) {
+        if (typeof __app_id !== 'undefined') {
+            return db.collection('artifacts').doc(__app_id).collection('public').doc('data').collection('durak_games').doc(id);
+        }
+        return db.collection('durak_games').doc(id);
     }
 
     async function createGame() {
         const nameInput = document.getElementById('player-name').value.trim();
-        if (!nameInput) return showError("Введите имя!");
-        if (!myId) return showError("Подключение...");
-
+        if (!nameInput) return log("Введите имя!", 'err');
+        
+        log("Создание игры...", 'info');
         myName = nameInput;
         localStorage.setItem('durak_name', myName);
-        toggleLoader(true);
 
         try {
             const newDeck = generateDeck();
             const trumpCard = newDeck[0]; 
             const deckToPlay = [...newDeck];
-
             const initialHand = [];
             for(let i=0; i<6; i++) initialHand.push(deckToPlay.pop());
             sortHand(initialHand, trumpCard.suit);
 
             const newGameId = Math.random().toString(36).substr(2, 6).toUpperCase();
             
-            const gameRef = getGameCollection().doc(newGameId);
-
-            await gameRef.set({
+            await getGameRef(newGameId).set({
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 hostId: myId,
                 status: 'waiting',
                 deck: deckToPlay,
                 trump: { rank: trumpCard.rank, suit: trumpCard.suit, isRed: isRed(trumpCard.suit) },
                 trumpSuit: trumpCard.suit,
-                players: {
-                    [myId]: { name: myName, hand: initialHand }
-                },
+                players: { [myId]: { name: myName, hand: initialHand } },
                 table: [],
                 currentTurn: myId, 
                 defenderId: null,
                 winner: null
             });
 
+            log("Игра создана: " + newGameId, 'ok');
             gameId = newGameId;
-            startGameListener(gameRef);
+            startGameListener();
 
         } catch (e) {
-            console.error(e);
-            showError("Ошибка: " + e.message);
-        } finally {
-            toggleLoader(false);
+            log("Ошибка создания: " + e.message, 'err');
         }
     }
 
     async function joinGameInput() {
         const code = document.getElementById('join-code').value.trim().toUpperCase();
         const nameInput = document.getElementById('player-name').value.trim();
-        if (!code) return showError("Введите код!");
-        if (!nameInput) return showError("Введите имя!");
-
+        if (!code) return log("Нет кода!", 'err');
+        
+        log("Подключение к " + code + "...", 'info');
         myName = nameInput;
         localStorage.setItem('durak_name', myName);
-        toggleLoader(true);
 
         try {
-            const gameRef = getGameCollection().doc(code);
+            const gameRef = getGameRef(code);
             const doc = await gameRef.get();
 
-            if (!doc.exists) throw new Error("Игра не найдена");
+            if (!doc.exists) throw new Error("Не найдено");
             const data = doc.data();
 
-            if (data.status !== 'waiting' && !data.players[myId]) throw new Error("Игра уже идет");
-            
             if (!data.players[myId]) {
+                if (data.status !== 'waiting') throw new Error("Игра уже идет");
+                
                 const deck = [...data.deck];
                 const myHand = [];
-                for(let i=0; i<6; i++) {
-                    if(deck.length > 0) myHand.push(deck.pop());
-                }
+                for(let i=0; i<6; i++) if(deck.length > 0) myHand.push(deck.pop());
                 sortHand(myHand, data.trumpSuit);
                 
                 await gameRef.update({
@@ -447,117 +338,93 @@
                     playerIds: [data.hostId, myId]
                 });
             }
-
             gameId = code;
-            startGameListener(gameRef);
-
+            startGameListener();
         } catch (e) {
-            showError(e.message);
-        } finally {
-            toggleLoader(false);
+            log("Ошибка входа: " + e.message, 'err');
         }
     }
 
-    function startGameListener(gameRef) {
+    function startGameListener() {
         document.getElementById('menu-screen').style.display = 'none';
         document.getElementById('game-screen').style.display = 'flex';
         document.getElementById('ui-game-code').innerText = gameId;
         document.getElementById('ui-my-name').innerText = myName;
 
-        unsubscribe = gameRef.onSnapshot((doc) => {
-            if (!doc.exists) {
-                alert("Игру удалили");
-                location.reload();
-                return;
-            }
+        getGameRef(gameId).onSnapshot((doc) => {
+            if (!doc.exists) { alert("Игра удалена"); location.reload(); return; }
             gameState = doc.data();
             renderGame();
+        }, (error) => {
+             console.error(error);
+             // Если ошибка прав доступа
+             if (error.code === 'permission-denied') {
+                 alert("Ошибка прав доступа! Проверьте Firestore Rules.");
+             }
         });
     }
 
-    // ==========================================
-    // 4. ГРАФИКА
-    // ==========================================
+    // --- ГРАФИКА И ЛОГИКА ---
+    // (Стандартная логика дурака, сокращена для компактности)
+    const SUITS = ['♠', '♣', '♦', '♥'];
+    const RANKS = ['6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    const VALUES = { '6':6, '7':7, '8':8, '9':9, '10':10, 'J':11, 'Q':12, 'K':13, 'A':14 };
 
     function renderGame() {
         if (!gameState) return;
-
+        
+        // Победа
         if (gameState.winner) {
-            const winnerName = gameState.players[gameState.winner].name;
-            const msg = (gameState.winner === myId) ? "🏆 ПОБЕДА! 🏆" : `😔 Победил ${winnerName}`;
-            const st = document.getElementById('status-display');
-            st.innerText = msg;
-            st.style.display = 'block';
-            st.style.background = (gameState.winner === myId) ? "rgba(46, 204, 113, 0.9)" : "rgba(192, 57, 43, 0.9)";
-            
-            const btn = document.getElementById('btn-action');
-            btn.innerText = "Меню";
-            btn.disabled = false;
-            btn.className = "game-btn";
-            btn.onclick = () => location.reload();
+            const msg = (gameState.winner === myId) ? "ПОБЕДА!" : "ПРОИГРЫШ";
+            document.getElementById('status-display').style.display = 'block';
+            document.getElementById('status-display').innerText = msg;
+            document.getElementById('btn-action').innerText = "ВЫХОД";
+            document.getElementById('btn-action').onclick = () => location.reload();
             return;
         }
 
-        const playerIds = Object.keys(gameState.players);
-        const opponentId = playerIds.find(id => id !== myId);
-        if (opponentId && gameState.players[opponentId]) {
-            document.getElementById('ui-opp-name').innerText = gameState.players[opponentId].name;
-            renderOpponentHand(gameState.players[opponentId].hand.length);
+        const oppId = Object.keys(gameState.players).find(id => id !== myId);
+        if (oppId) {
+            document.getElementById('ui-opp-name').innerText = gameState.players[oppId].name;
+            renderCards('opponent-hand', gameState.players[oppId].hand, true);
         } else {
-            document.getElementById('ui-opp-name').innerText = "Ожидание...";
-            document.getElementById('opponent-hand').innerHTML = '';
+            document.getElementById('ui-opp-name').innerText = "Ждем...";
         }
 
-        const myData = gameState.players[myId];
-        renderMyHand(myData ? myData.hand : []);
-
+        renderCards('player-hand', gameState.players[myId].hand, false);
         renderTable(gameState.table);
         renderDeck(gameState.deck.length, gameState.trump);
         updateControls();
     }
 
-    function renderOpponentHand(count) {
-        const container = document.getElementById('opponent-hand');
+    function renderCards(elementId, hand, isOpponent) {
+        const container = document.getElementById(elementId);
         container.innerHTML = '';
-        const visualCount = Math.min(count, 8); 
-        for (let i = 0; i < visualCount; i++) {
-            const cardEl = document.createElement('div');
-            cardEl.className = 'card card-back';
-            const offset = (i - visualCount/2) * 20;
-            const rotate = (i - visualCount/2) * 5;
-            cardEl.style.position = 'absolute';
-            cardEl.style.transform = `translateX(${offset}px) rotate(${rotate}deg)`;
-            container.appendChild(cardEl);
+        const count = hand.length;
+        const visualCount = isOpponent ? Math.min(count, 8) : count;
+        
+        for(let i=0; i<visualCount; i++) {
+            const card = isOpponent ? null : hand[i];
+            const el = document.createElement('div');
+            el.className = isOpponent ? 'card card-back' : `card ${isRed(card.suit)?'red':'black'}`;
+            
+            if (!isOpponent) {
+                el.innerHTML = `
+                    <div class="card-top-left"><div>${card.rank}</div><div>${card.suit}</div></div>
+                    <div class="card-center">${card.suit}</div>
+                    <div class="card-bottom-right"><div>${card.rank}</div><div>${card.suit}</div></div>
+                `;
+                el.onclick = () => onCardClick(card);
+            }
+            // Веер
+            if (isOpponent) {
+                const off = (i - visualCount/2)*20;
+                const rot = (i - visualCount/2)*5;
+                el.style.position = 'absolute';
+                el.style.transform = `translateX(${off}px) rotate(${rot}deg)`;
+            }
+            container.appendChild(el);
         }
-    }
-
-    function renderMyHand(hand) {
-        const container = document.getElementById('player-hand');
-        container.innerHTML = '';
-        hand.forEach((card) => {
-            const cardEl = createCardElement(card);
-            cardEl.onclick = () => onCardClick(card);
-            container.appendChild(cardEl);
-        });
-    }
-
-    function createCardElement(card) {
-        const el = document.createElement('div');
-        el.className = `card ${isRed(card.suit) ? 'red' : 'black'}`;
-        // ИСПОЛЬЗУЕМ НОВЫЙ ДИЗАЙН:
-        // card-top-left, card-center, card-bottom-right
-        el.innerHTML = `
-            <div class="card-top-left">
-                <div>${card.rank}</div>
-                <div>${card.suit}</div>
-            </div>
-            <div class="card-center">${card.suit}</div>
-            <div class="card-bottom-right">
-                <div>${card.rank}</div>
-                <div>${card.suit}</div>
-            </div>
-        `;
-        return el;
     }
 
     function renderTable(table) {
@@ -566,9 +433,10 @@
         table.forEach(pair => {
             const slot = document.createElement('div');
             slot.className = 'slot';
-            slot.appendChild(createCardElement(pair.attack));
-            if (pair.defend) {
-                const def = createCardElement(pair.defend);
+            const att = createCard(pair.attack);
+            slot.appendChild(att);
+            if(pair.defend) {
+                const def = createCard(pair.defend);
                 def.classList.add('defending');
                 slot.appendChild(def);
             }
@@ -576,255 +444,153 @@
         });
     }
 
+    function createCard(card) {
+        const el = document.createElement('div');
+        el.className = `card ${isRed(card.suit)?'red':'black'}`;
+        el.innerHTML = `
+            <div class="card-top-left"><div>${card.rank}</div><div>${card.suit}</div></div>
+            <div class="card-center">${card.suit}</div>
+            <div class="card-bottom-right"><div>${card.rank}</div><div>${card.suit}</div></div>
+        `;
+        return el;
+    }
+
     function renderDeck(count, trump) {
-        const placeholder = document.getElementById('trump-placeholder');
-        const countEl = document.getElementById('deck-count');
-        placeholder.innerHTML = '';
-        
-        if (count > 0 || (count === 0 && trump)) {
-            const trumpEl = document.createElement('div');
-            trumpEl.className = `card trump-card-container ${trump.isRed ? 'red' : 'black'}`;
-            // Для козыря тоже новый дизайн
-            trumpEl.innerHTML = `
-                <div class="card-top-left">
-                    <div>${trump.rank}</div>
-                    <div>${trump.suit}</div>
-                </div>
-                <div class="card-center" style="transform: translate(-50%, -50%) rotate(-90deg);">${trump.suit}</div>
-                <div class="card-bottom-right">
-                    <div>${trump.rank}</div>
-                    <div>${trump.suit}</div>
-                </div>
-            `;
-            placeholder.appendChild(trumpEl);
+        const ph = document.getElementById('trump-placeholder');
+        ph.innerHTML = '';
+        if (count > 0 || (count===0 && trump)) {
+            const el = createCard(trump);
+            el.className += ' trump-card-container';
+            ph.appendChild(el);
         }
-        countEl.style.display = count > 0 ? 'flex' : 'none';
-        countEl.innerText = count;
+        document.getElementById('deck-count').innerText = count > 0 ? count : "";
+        document.getElementById('deck-count').style.display = count > 0 ? 'flex' : 'none';
     }
 
     function updateControls() {
         const btn = document.getElementById('btn-action');
-        const statusEl = document.getElementById('status-display');
+        const st = document.getElementById('status-display');
+        st.style.display = 'none';
         
         if (gameState.status === 'waiting') {
-            statusEl.innerText = "Ожидание соперника...";
-            statusEl.style.display = 'block';
-            statusEl.style.background = 'rgba(0,0,0,0.5)';
-            btn.disabled = true;
-            btn.innerText = "Ждем...";
-            return;
+            btn.innerText = "Ждем игрока..."; btn.disabled = true; return;
         }
 
         const isMyTurn = gameState.currentTurn === myId;
         const isDefender = gameState.defenderId === myId;
-        
-        btn.disabled = true;
-        btn.className = "game-btn";
-        btn.onclick = doAction;
+        btn.disabled = false;
 
-        if (isMyTurn) { // ХОД АТАКИ
-            statusEl.style.display = 'block';
-            if (gameState.table.length > 0) {
-                const allBeaten = gameState.table.every(p => p.defend);
-                if (allBeaten) {
-                    statusEl.innerText = "Все карты побиты. Можно в Бито.";
-                    statusEl.style.background = "rgba(46, 204, 113, 0.7)";
-                    btn.innerText = "БИТО";
-                    btn.disabled = false;
-                    btn.onclick = actionBito;
-                } else {
-                    statusEl.innerText = "Ждем, пока отобьется...";
-                    statusEl.style.background = "rgba(0,0,0,0.5)";
-                    btn.innerText = "Ждем...";
-                }
+        if (isMyTurn) {
+            if (gameState.table.length > 0 && gameState.table.every(p => p.defend)) {
+                btn.innerText = "БИТО"; btn.onclick = actionBito;
+                btn.style.background = "#4cd137";
             } else {
-                statusEl.innerText = "Ваш ход! Выберите карту.";
-                statusEl.style.background = "rgba(46, 204, 113, 0.7)";
-                btn.innerText = "Кидайте карту";
+                btn.innerText = "Кидай карту"; btn.disabled = true; btn.style.background = "#ffcc00";
             }
-
-        } else if (isDefender) { // ХОД ЗАЩИТЫ
-            statusEl.innerText = "Вам нужно отбиться!";
-            statusEl.style.background = "rgba(231, 76, 60, 0.7)";
-            statusEl.style.display = 'block';
-
-            btn.innerText = "ВЗЯТЬ";
-            btn.className = "game-btn btn-take";
-            btn.disabled = false;
-            btn.onclick = actionTake;
-
+        } else if (isDefender) {
+            btn.innerText = "ВЗЯТЬ"; btn.onclick = actionTake;
+            btn.style.background = "#e84118";
         } else {
-            statusEl.innerText = "Ход соперника...";
-            statusEl.style.background = "rgba(0,0,0,0.5)";
-            statusEl.style.display = 'block';
-            btn.innerText = "...";
+            btn.innerText = "Смотрим..."; btn.disabled = true;
         }
     }
 
-    // ==========================================
-    // 5. ИГРОВАЯ ЛОГИКА
-    // ==========================================
-
-    function doAction() {
-        tg.showAlert("Выберите действие (нажмите на карту или кнопку)");
-    }
+    // --- ЛОГИКА ХОДОВ ---
+    function doAction() { tg.showAlert("Выберите карту или кнопку"); }
 
     function onCardClick(card) {
         if (gameState.status !== 'playing') return;
-        
         const isMyTurn = gameState.currentTurn === myId;
         const isDefender = gameState.defenderId === myId;
 
         if (isMyTurn) {
-            if (gameState.table.length >= 6) return tg.showAlert("Стол полон (6 карт)");
+            // Атака
+            if (gameState.table.length >= 6) return;
             if (gameState.table.length > 0) {
-                const ranks = getAllTableRanks();
-                if (!ranks.includes(card.rank)) return tg.showAlert("Только карты того же ранга!");
+                const ranks = gameState.table.flatMap(p => [p.attack.rank, p.defend?.rank]).filter(r=>r);
+                if (!ranks.includes(card.rank)) return tg.showAlert("Нет такой карты на столе");
             }
-            const oppId = Object.keys(gameState.players).find(id => id !== myId);
-            const oppHandCount = gameState.players[oppId].hand.length;
-            const unbeatCount = gameState.table.filter(p => !p.defend).length;
-            if (unbeatCount + 1 > oppHandCount) return tg.showAlert("У соперника больше нет карт!");
-
-            playCardToTable(card, 'attack');
-        } 
-        else if (isDefender) {
-            const pairIndex = gameState.table.findIndex(p => !p.defend);
-            if (pairIndex === -1) return tg.showAlert("Нечего отбивать, ждите.");
-
-            const attackCard = gameState.table[pairIndex].attack;
-            if (canBeat(card, attackCard, gameState.trumpSuit)) {
-                playCardToTable(card, 'defend', pairIndex);
-            } else {
-                tg.showAlert("Этой картой нельзя побить!");
-            }
+            playCard(card, 'attack');
+        } else if (isDefender) {
+            // Защита
+            const idx = gameState.table.findIndex(p => !p.defend);
+            if (idx === -1) return;
+            const att = gameState.table[idx].attack;
+            if (canBeat(card, att, gameState.trumpSuit)) playCard(card, 'defend', idx);
+            else tg.showAlert("Не бьет!");
         }
     }
 
-    async function playCardToTable(card, type, pairIndex = null) {
-        const gameRef = getGameCollection().doc(gameId);
-        const newHand = gameState.players[myId].hand.filter(c => !isCardsEqual(c, card));
-        const newTable = JSON.parse(JSON.stringify(gameState.table)); 
-
-        if (type === 'attack') {
-            newTable.push({ attack: card, defend: null });
-        } else {
-            newTable[pairIndex].defend = card;
-        }
-
-        await gameRef.update({
-            [`players.${myId}.hand`]: newHand,
-            table: newTable
-        });
+    async function playCard(card, type, idx) {
+        const ref = getGameRef(gameId);
+        const newHand = gameState.players[myId].hand.filter(c => !(c.rank===card.rank && c.suit===card.suit));
+        const newTable = [...gameState.table];
+        if (type === 'attack') newTable.push({attack:card, defend:null});
+        else newTable[idx].defend = card;
+        
+        await ref.update({ [`players.${myId}.hand`]: newHand, table: newTable });
     }
 
     async function actionBito() {
-        const gameRef = getGameCollection().doc(gameId);
-        const attackerId = myId;
-        const defenderId = gameState.defenderId;
-        
+        const ref = getGameRef(gameId);
+        const attId = myId;
+        const defId = gameState.defenderId;
+        // Добор
         let deck = [...gameState.deck];
-        let p1Hand = [...gameState.players[attackerId].hand];
-        let p2Hand = [...gameState.players[defenderId].hand];
+        let h1 = [...gameState.players[attId].hand], h2 = [...gameState.players[defId].hand];
+        while(h1.length < 6 && deck.length) h1.push(deck.pop());
+        while(h2.length < 6 && deck.length) h2.push(deck.pop());
+        sortHand(h1, gameState.trumpSuit); sortHand(h2, gameState.trumpSuit);
 
-        while(p1Hand.length < 6 && deck.length > 0) p1Hand.push(deck.pop());
-        while(p2Hand.length < 6 && deck.length > 0) p2Hand.push(deck.pop());
-        
-        sortHand(p1Hand, gameState.trumpSuit);
-        sortHand(p2Hand, gameState.trumpSuit);
+        let win = null;
+        if (!deck.length && !h1.length) win = attId;
+        else if (!deck.length && !h2.length) win = defId;
 
-        let winner = null;
-        if (deck.length === 0) {
-            if (p1Hand.length === 0) winner = attackerId;
-            else if (p2Hand.length === 0) winner = defenderId;
-        }
-
-        await gameRef.update({
-            table: [],
-            deck: deck,
-            [`players.${attackerId}.hand`]: p1Hand,
-            [`players.${defenderId}.hand`]: p2Hand,
-            currentTurn: defenderId,
-            defenderId: attackerId,
-            winner: winner
+        await ref.update({
+            table: [], deck: deck,
+            [`players.${attId}.hand`]: h1, [`players.${defId}.hand`]: h2,
+            currentTurn: defId, defenderId: attId, winner: win
         });
     }
 
     async function actionTake() {
-        const gameRef = getGameCollection().doc(gameId);
-        
-        const cardsToTake = [];
-        gameState.table.forEach(p => {
-            cardsToTake.push(p.attack);
-            if(p.defend) cardsToTake.push(p.defend);
-        });
+        const ref = getGameRef(gameId);
+        const cards = gameState.table.flatMap(p => [p.attack, p.defend]).filter(c=>c);
+        let myH = [...gameState.players[myId].hand, ...cards];
+        sortHand(myH, gameState.trumpSuit);
 
-        let myHand = [...gameState.players[myId].hand, ...cardsToTake];
-        sortHand(myHand, gameState.trumpSuit);
-
-        const attackerId = gameState.currentTurn; 
+        // Атакующий добирает
+        const attId = gameState.currentTurn;
         let deck = [...gameState.deck];
-        let attHand = [...gameState.players[attackerId].hand];
+        let attH = [...gameState.players[attId].hand];
+        while(attH.length < 6 && deck.length) attH.push(deck.pop());
+        
+        let win = null;
+        if (!deck.length && !attH.length) win = attId;
 
-        while(attHand.length < 6 && deck.length > 0) attHand.push(deck.pop());
-        sortHand(attHand, gameState.trumpSuit);
-
-        let winner = null;
-        if (deck.length === 0 && attHand.length === 0) winner = attackerId;
-
-        await gameRef.update({
-            table: [],
-            deck: deck,
-            [`players.${myId}.hand`]: myHand,
-            [`players.${attackerId}.hand`]: attHand,
-            winner: winner
+        await ref.update({
+            table: [], deck: deck,
+            [`players.${myId}.hand`]: myH, [`players.${attId}.hand`]: attH,
+            winner: win
         });
     }
 
-    // ==========================================
-    // 6. УТИЛИТЫ
-    // ==========================================
-
+    // --- УТИЛИТЫ ---
     function generateDeck() {
-        let d = [];
-        for(let s of SUITS) {
-            for(let r of RANKS) {
-                d.push({rank: r, suit: s});
-            }
-        }
-        for (let i = d.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [d[i], d[j]] = [d[j], d[i]];
-        }
-        return d;
+        let d=[]; for(let s of SUITS) for(let r of RANKS) d.push({rank:r, suit:s});
+        return d.sort(()=>Math.random()-0.5);
     }
-
-    function sortHand(hand, trumpSuit) {
-        hand.sort((a, b) => {
-            const valA = VALUES[a.rank] + (a.suit === trumpSuit ? 100 : 0);
-            const valB = VALUES[b.rank] + (b.suit === trumpSuit ? 100 : 0);
-            return valA - valB;
-        });
+    function sortHand(h, t) {
+        h.sort((a,b) => (VALUES[a.rank]+(a.suit===t?100:0)) - (VALUES[b.rank]+(b.suit===t?100:0)));
     }
-
-    function isRed(suit) { return suit === '♦' || suit === '♥'; }
-    function isCardsEqual(c1, c2) { return c1.rank === c2.rank && c1.suit === c2.suit; }
-    
-    function getAllTableRanks() {
-        return gameState.table.flatMap(p => [p.attack.rank, p.defend ? p.defend.rank : null]).filter(r => r);
+    function isRed(s) { return s==='♦'||s==='♥'; }
+    function canBeat(c, t, tr) {
+        if (c.suit === t.suit) return VALUES[c.rank] > VALUES[t.rank];
+        return c.suit === tr;
     }
-
-    function canBeat(card, target, trumpSuit) {
-        if (card.suit === target.suit) {
-            return VALUES[card.rank] > VALUES[target.rank];
-        }
-        return card.suit === trumpSuit;
-    }
-    
     function copyCode() {
-        const code = document.getElementById('ui-game-code').innerText;
-        navigator.clipboard.writeText(code);
-        tg.showAlert("Код скопирован: " + code);
+        navigator.clipboard.writeText(gameId);
+        tg.showAlert("Скопировано");
     }
 
 </script>
