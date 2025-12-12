@@ -101,7 +101,11 @@
 
                 <!-- ОНЛАЙН -->
                 <div id="online-controls" class="space-y-3 opacity-50 pointer-events-none transition-opacity">
-                    <div class="text-xs text-center text-blue-600 mb-2" id="auth-status">Подключение к серверу...</div>
+                    <!-- СТАТУС ПОДКЛЮЧЕНИЯ -->
+                    <div class="text-xs text-center text-gray-400 mb-2" id="auth-status">
+                        Требуется свой Firebase Config
+                    </div>
+                    
                     <button onclick="createOnlineGame()" class="w-full btn-primary bg-blue-600 hover:bg-blue-700 text-sm py-3">
                         Создать Онлайн Игру
                     </button>
@@ -181,6 +185,33 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // =========================================================================
+        //  НАСТРОЙКИ СЕРВЕРА (FIREBASE)
+        //  Если вы хотите играть онлайн здесь, создайте проект на firebase.google.com
+        //  и вставьте свой конфиг ниже вместо 'null'.
+        // =========================================================================
+        
+    const MY_CUSTOM_CONFIG = {
+  apiKey: "AIzaSyBlfCYqHw_uHxP6pyKOkW0QFsuHFw9_XyY",
+  authDomain: "durakweb3.firebaseapp.com",
+  projectId: "durakweb3",
+  storageBucket: "durakweb3.firebasestorage.app",
+  messagingSenderId: "306514193440",
+  appId: "1:306514193440:web:79d78252da6ee29c40a045",
+  measurementId: "G-69VNYN2Z20"
+};; 
+        
+        /* Пример того, как это должно выглядеть:
+        const MY_CUSTOM_CONFIG = {
+            apiKey: "AIzaSy...",
+            authDomain: "my-project.firebaseapp.com",
+            projectId: "my-project",
+            storageBucket: "my-project.appspot.com",
+            messagingSenderId: "...",
+            appId: "..."
+        };
+        */
+
         // --- GLOBAL STATE ---
         let GAME_MODE = 'OFFLINE'; // 'ONLINE' or 'OFFLINE'
         let currentUser = { uid: 'player-offline' };
@@ -190,49 +221,63 @@
         let localState = null; // Текущее состояние игры
         let botTimer = null;
 
-        // --- FIREBASE INIT (Try-Catch for Safety) ---
+        // --- FIREBASE INIT ---
         let db, auth, gamesRef;
         let isFirebaseReady = false;
 
-        try {
-            // Пытаемся взять конфиг среды
-            const fbConfig = (typeof __firebase_config !== 'undefined') 
-                ? JSON.parse(__firebase_config) 
-                : { apiKey: "AIzaSyBlfCYqHw_uHxP6pyKOkW0QFsuHFw9_XyY" }; // Fallback (не сработает для Firestore без projectId)
+        async function initFirebase() {
+            try {
+                let fbConfig = null;
 
-            if (fbConfig.projectId) {
-                const app = initializeApp(fbConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default';
-                gamesRef = collection(db, 'artifacts', appId, 'public', 'data', 'games');
-                
-                // Auth
-                const initAuth = async () => {
+                // 1. Проверяем, вставил ли пользователь свой конфиг вручную
+                if (MY_CUSTOM_CONFIG) {
+                    fbConfig = MY_CUSTOM_CONFIG;
+                    console.log("Используем пользовательский конфиг");
+                } 
+                // 2. Иначе пробуем взять конфиг из среды (LLM Environment)
+                else if (typeof __firebase_config !== 'undefined') {
+                    fbConfig = JSON.parse(__firebase_config);
+                    console.log("Используем конфиг среды");
+                }
+
+                // Если конфига нет или он неполный (только ключ), онлайн не заработает
+                if (fbConfig && fbConfig.projectId) {
+                    const app = initializeApp(fbConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default';
+                    gamesRef = collection(db, 'artifacts', appId, 'public', 'data', 'games');
+                    
+                    // Авторизация
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         await signInWithCustomToken(auth, __initial_auth_token);
                     } else {
                         await signInAnonymously(auth);
                     }
-                };
-                initAuth();
 
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        currentUser = user;
-                        isFirebaseReady = true;
-                        document.getElementById('online-controls').classList.remove('opacity-50', 'pointer-events-none');
-                        document.getElementById('auth-status').innerText = "Сервер подключен";
-                        document.getElementById('auth-status').className = "text-xs text-center text-green-600 mb-2";
-                    }
-                });
-            } else {
-                document.getElementById('auth-status').innerText = "Онлайн недоступен (Нет конфига)";
-                document.getElementById('auth-status').className = "text-xs text-center text-red-500 mb-2";
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            currentUser = user;
+                            isFirebaseReady = true;
+                            const statusEl = document.getElementById('auth-status');
+                            statusEl.innerText = "Сервер подключен (Готов к игре)";
+                            statusEl.className = "text-xs text-center text-green-600 mb-2 font-bold";
+                            
+                            document.getElementById('online-controls').classList.remove('opacity-50', 'pointer-events-none');
+                        }
+                    });
+                } else {
+                    console.log("Нет валидного конфига Firebase. Онлайн отключен.");
+                    document.getElementById('auth-status').innerText = "Для онлайна нужен конфиг (см. код)";
+                    document.getElementById('auth-status').className = "text-xs text-center text-red-400 mb-2";
+                }
+            } catch (e) {
+                console.error("Firebase Init Error:", e);
+                document.getElementById('auth-status').innerText = "Ошибка инициализации: " + e.message;
             }
-        } catch (e) {
-            console.log("Firebase init error (Offline mode only):", e);
         }
+
+        initFirebase();
 
         // --- LOBBY FUNCTIONS ---
 
