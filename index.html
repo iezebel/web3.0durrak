@@ -64,15 +64,18 @@
         }
 
         /* UI */
-        .btn-primary {
-            background: #2563eb; color: white; padding: 0.75rem 1.5rem; border-radius: 9999px; font-weight: bold;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: all 0.2s; cursor: pointer;
+        .btn-action {
+            padding: 0.75rem 2rem; border-radius: 9999px; font-weight: bold; font-size: 1.1rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: all 0.2s; cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.2);
         }
-        .btn-primary:active { transform: scale(0.95); }
-        .btn-secondary {
-            background: #dc2626; color: white; padding: 0.75rem 1.5rem; border-radius: 9999px; font-weight: bold;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: all 0.2s; cursor: pointer;
-        }
+        .btn-action:active { transform: scale(0.95); }
+        
+        .btn-bito { background: #16a34a; color: white; } /* Green */
+        .btn-bito:hover { background: #15803d; }
+        
+        .btn-take { background: #dc2626; color: white; } /* Red */
+        .btn-take:hover { background: #b91c1c; }
 
         #lobby-screen { z-index: 1000; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); }
         
@@ -119,13 +122,13 @@
                         Требуется свой Firebase Config
                     </div>
                     
-                    <button onclick="createOnlineGame()" class="w-full btn-primary bg-blue-600 hover:bg-blue-700 text-sm py-3">
+                    <button onclick="createOnlineGame()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow transition">
                         Создать Онлайн Игру
                     </button>
                     <div class="flex gap-2">
                         <input id="join-game-id" type="text" placeholder="ID (6 цифр)" 
                                class="flex-1 border-2 border-gray-300 p-2 rounded-lg text-center font-mono uppercase text-sm">
-                        <button onclick="joinOnlineGame()" class="btn-primary py-2 text-sm">Войти</button>
+                        <button onclick="joinOnlineGame()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow transition text-sm">Войти</button>
                     </div>
                 </div>
             </div>
@@ -171,8 +174,14 @@
 
         <div id="game-table"></div>
 
-        <div id="action-area" class="absolute bottom-44 left-1/2 transform -translate-x-1/2 z-50 transition-opacity opacity-0 pointer-events-none">
-            <button id="main-action-btn" class="btn-primary pointer-events-auto shadow-2xl ring-4 ring-white/30 text-lg px-8 py-3">Действие</button>
+        <!-- КНОПКИ ДЕЙСТВИЙ (БИТО / БЕРУ) -->
+        <div id="action-area" class="absolute bottom-40 left-1/2 transform -translate-x-1/2 z-50 transition-opacity duration-300 opacity-0 pointer-events-none flex gap-6">
+            <button id="btn-bito" onclick="performAction('bito')" class="btn-action btn-bito hidden pointer-events-auto">
+                Бито
+            </button>
+            <button id="btn-take" onclick="performAction('take')" class="btn-action btn-take hidden pointer-events-auto">
+                Взять
+            </button>
         </div>
 
         <div id="player-hand"></div>
@@ -188,20 +197,15 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // =========================================================================
-        //  НАСТРОЙКИ СЕРВЕРА (FIREBASE)
-        //  Вставьте сюда свой конфиг для игры онлайн
-        // =========================================================================
         const MY_CUSTOM_CONFIG = {
-  apiKey: "AIzaSyBlfCYqHw_uHxP6pyKOkW0QFsuHFw9_XyY",
-  authDomain: "durakweb3.firebaseapp.com",
-  projectId: "durakweb3",
-  storageBucket: "durakweb3.firebasestorage.app",
-  messagingSenderId: "306514193440",
-  appId: "1:306514193440:web:79d78252da6ee29c40a045",
-  measurementId: "G-69VNYN2Z20"
-};
-        
+          apiKey: "AIzaSyBlfCYqHw_uHxP6pyKOkW0QFsuHFw9_XyY",
+          authDomain: "durakweb3.firebaseapp.com",
+          projectId: "durakweb3",
+          storageBucket: "durakweb3.firebasestorage.app",
+          messagingSenderId: "306514193440",
+          appId: "1:306514193440:web:79d78252da6ee29c40a045",
+          measurementId: "G-69VNYN2Z20"
+        };
 
         const LOSER_JOKES = [
             "Ну ты даешь... даже хлеб умнее играет.",
@@ -214,7 +218,7 @@
         ];
 
         // --- GLOBAL STATE ---
-        let GAME_MODE = 'OFFLINE'; // 'ONLINE' or 'OFFLINE'
+        let GAME_MODE = 'OFFLINE'; 
         let currentUser = { uid: 'player-offline' };
         let currentGameId = null;
         let unsubscribeGame = null;
@@ -375,33 +379,27 @@
             });
         }
 
-        // --- ОСНОВНАЯ ЛОГИКА (ОБЩАЯ ДЛЯ ОФЛАЙН И ОНЛАЙН) ---
+        // --- ОСНОВНАЯ ЛОГИКА ---
 
         window.playerCardClick = (card) => {
             const state = localState;
             const myUid = GAME_MODE === 'OFFLINE' ? 'player' : currentUser.uid;
             
-            // Проверки хода и роли
             const isMyTurn = state.turn === myUid;
             const amIAttacker = state.attacker === myUid;
             const matchesTable = state.table.some(p => p.attack.rank === card.rank || (p.defend && p.defend.rank === card.rank));
             
-            // Правило подкидывания: можно кидать, если я Атакующий И карта совпадает, даже если сейчас ход защитника
             if (!isMyTurn && !(amIAttacker && matchesTable)) {
                 return showToast("Не ваш ход! Ждите.");
             }
 
             if (amIAttacker) {
-                // АТАКА / ПОДКИДЫВАНИЕ
                 if (state.table.length > 0 && !matchesTable) return showToast("Карта не совпадает по рангу");
-                if (state.table.length >= 6) return showToast("Стол полон (макс 6 карт)");
+                if (state.table.length >= 6) return showToast("Стол полон");
                 
-                // Если офлайн и мы подкидываем пока бот думает -> стоп таймер
                 if (GAME_MODE === 'OFFLINE' && botTimer) { clearTimeout(botTimer); botTimer = null; }
-                
                 applyMove(card, 'attack');
             } else {
-                // ЗАЩИТА
                 if (!isMyTurn) return showToast("Ждите хода соперника");
                 
                 const pairIdx = state.table.findIndex(p => !p.defend);
@@ -420,8 +418,6 @@
         };
 
         async function applyMove(card, type, idx = -1) {
-            // Клонируем стейт для модификации (в онлайн просто соберем патч)
-            // Но здесь мы модифицируем локальный объект для расчетов
             const myUid = GAME_MODE === 'OFFLINE' ? 'player' : currentUser.uid;
             const oppId = GAME_MODE === 'OFFLINE' ? 'bot' : (localState.hostId === myUid ? localState.joinerId : localState.hostId);
 
@@ -433,11 +429,10 @@
 
             if (type === 'attack') {
                 newTable.push({ attack: card, defend: null });
-                newTurn = oppId; // Передаем ход защитнику
+                newTurn = oppId;
                 if (GAME_MODE === 'OFFLINE') startBotTimer();
             } else {
                 newTable[idx] = { ...newTable[idx], defend: card };
-                // Если есть еще неотбитые -> ход остается у защитника. Если всё отбито -> ход Атакующего (подкинуть или бито)
                 const hasUndefended = newTable.some(p => !p.defend);
                 if (!hasUndefended) {
                     newTurn = localState.attacker;
@@ -445,7 +440,6 @@
                 }
             }
 
-            // Применяем изменения
             if (GAME_MODE === 'ONLINE') {
                 await updateDoc(doc(gamesRef, currentGameId), {
                     [`hands.${myUid}`]: newHands[myUid],
@@ -464,33 +458,30 @@
             const myUid = GAME_MODE === 'OFFLINE' ? 'player' : currentUser.uid;
             const oppId = GAME_MODE === 'OFFLINE' ? 'bot' : (localState.hostId === myUid ? localState.joinerId : localState.hostId);
             
-            // Данные для обновления
             let d = [...localState.deck];
-            let h = JSON.parse(JSON.stringify(localState.hands)); // Deep copy simple
+            let h = JSON.parse(JSON.stringify(localState.hands));
             let t = [];
             let newAttacker = localState.attacker;
             let newTurn = localState.turn;
 
             if (action === 'bito') {
-                // Бито жмет Атакующий
-                // Добор карт: Сначала Атакующий, потом Защитник
+                // Бито
                 [myUid, oppId].forEach(uid => {
                     while(h[uid].length < 6 && d.length > 0) h[uid].push(d.pop());
                 });
-                newAttacker = oppId; // Смена ролей
+                newAttacker = oppId;
                 newTurn = oppId;
                 if (GAME_MODE === 'OFFLINE') startBotTimer();
 
             } else if (action === 'take') {
-                // Взять жмет Защитник
+                // Взять
                 let cardsToTake = [];
                 localState.table.forEach(p => { cardsToTake.push(p.attack); if(p.defend) cardsToTake.push(p.defend); });
                 h[myUid] = [...h[myUid], ...cardsToTake];
                 
-                // Атакующий (oppId) добирает
                 while(h[oppId].length < 6 && d.length > 0) h[oppId].push(d.pop());
                 
-                newAttacker = oppId; // Атакующий сохраняет инициативу
+                newAttacker = oppId; 
                 newTurn = oppId;
                 if (GAME_MODE === 'OFFLINE') startBotTimer();
             }
@@ -527,7 +518,6 @@
                     const c = getLowestCard(botHand, state.trumpSuit);
                     botApplyMove(c, 'attack');
                 } else {
-                    // Подкидывание
                     const ranks = new Set();
                     state.table.forEach(p => { ranks.add(p.attack.rank); if(p.defend) ranks.add(p.defend.rank); });
                     const options = botHand.filter(c => ranks.has(c.rank)).sort((a,b) => getCardPower(a, state.trumpSuit) - getCardPower(b, state.trumpSuit));
@@ -535,13 +525,13 @@
                     if (options.length > 0 && state.table.length < 6) {
                         botApplyMove(options[0], 'attack');
                     } else {
-                        processAction('bito'); // Бот говорит Бито
+                        processAction('bito'); // Бот жмет Бито
                     }
                 }
             } else {
                 // БОТ ЗАЩИЩАЕТСЯ
                 const pairIdx = state.table.findIndex(p => !p.defend);
-                if (pairIdx === -1) return; // Всё отбито, ждет действий игрока
+                if (pairIdx === -1) return;
 
                 const att = state.table[pairIdx].attack;
                 let beaters = botHand.filter(c => canBeat(c, att, state.trumpSuit));
@@ -550,7 +540,7 @@
                     beaters.sort((a,b) => getCardPower(a, state.trumpSuit) - getCardPower(b, state.trumpSuit));
                     botApplyMove(beaters[0], 'defend', pairIdx);
                 } else {
-                    processAction('take'); // Бот берет
+                    processAction('take'); // Бот жмет Взять
                 }
             }
         }
@@ -573,7 +563,7 @@
             renderGame(state);
         }
 
-        // --- УТИЛИТЫ И UI ---
+        // --- UI RENDER ---
 
         function checkGameOver(state) {
             if (state.deck.length === 0) {
@@ -654,26 +644,29 @@
                 const b = document.createElement('div'); b.className = 'opponent-card-back'; oppHandEl.appendChild(b);
             }
 
-            // Buttons
+            // УПРАВЛЕНИЕ КНОПКАМИ БИТО/ВЗЯТЬ
             const btnArea = document.getElementById('action-area');
-            const btn = document.getElementById('main-action-btn');
+            const btnBito = document.getElementById('btn-bito');
+            const btnTake = document.getElementById('btn-take');
+            
             btnArea.classList.add('opacity-0', 'pointer-events-none');
+            btnBito.classList.add('hidden');
+            btnTake.classList.add('hidden');
 
             if (state.table.length > 0) {
                 if (amIAttacker) {
+                    // Атакующий видит БИТО
                     const allDefended = state.table.every(p => p.defend);
+                    // Бито можно нажать, если все отбито.
                     if (allDefended) {
                         btnArea.classList.remove('opacity-0', 'pointer-events-none');
-                        btn.innerText = "Бито";
-                        btn.className = "btn-primary bg-green-600 hover:bg-green-700 text-lg px-8 py-3 shadow-green-500/50";
-                        btn.onclick = () => performAction('bito');
+                        btnBito.classList.remove('hidden');
                     }
                 } else {
+                    // Защитник видит ВЗЯТЬ (только в свой ход)
                     if (isMyTurn) {
                         btnArea.classList.remove('opacity-0', 'pointer-events-none');
-                        btn.innerText = "Взять";
-                        btn.className = "btn-secondary bg-red-600 hover:bg-red-700 text-lg px-8 py-3 shadow-red-500/50";
-                        btn.onclick = () => performAction('take');
+                        btnTake.classList.remove('hidden');
                     }
                 }
             }
