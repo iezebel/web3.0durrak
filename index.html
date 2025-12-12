@@ -74,10 +74,10 @@
         }
         .btn-action:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
         
-        .btn-bito { background: #22c55e; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3); } /* Ярко-зеленый */
+        .btn-bito { background: #22c55e; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3); } 
         .btn-bito:hover { background: #16a34a; }
         
-        .btn-take { background: #ef4444; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3); } /* Ярко-красный */
+        .btn-take { background: #ef4444; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3); } 
         .btn-take:hover { background: #dc2626; }
 
         #lobby-screen { z-index: 1000; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); }
@@ -175,7 +175,6 @@
         <div id="game-table"></div>
 
         <!-- КНОПКИ ДЕЙСТВИЙ (БИТО / БЕРУ) -->
-        <!-- Максимальный Z-Index (999), без анимаций прозрачности, чтобы не было глюков -->
         <div id="action-area" class="absolute bottom-48 left-1/2 transform -translate-x-1/2 z-[999] flex gap-6 hidden">
             <button id="btn-bito" onclick="performAction('bito')" class="btn-action btn-bito hidden">
                 БИТО!
@@ -419,6 +418,7 @@
 
         async function applyMove(card, type, idx = -1) {
             const myUid = GAME_MODE === 'OFFLINE' ? 'player' : currentUser.uid;
+            // Определяем ID оппонента (для передачи хода)
             const oppId = GAME_MODE === 'OFFLINE' ? 'bot' : (localState.hostId === myUid ? localState.joinerId : localState.hostId);
 
             let newHands = { ...localState.hands };
@@ -429,12 +429,14 @@
 
             if (type === 'attack') {
                 newTable.push({ attack: card, defend: null });
-                newTurn = oppId;
+                newTurn = oppId; // После атаки ходит защищающийся
                 if (GAME_MODE === 'OFFLINE') startBotTimer();
             } else {
                 newTable[idx] = { ...newTable[idx], defend: card };
+                // Если побили, проверяем все ли отбито
                 const hasUndefended = newTable.some(p => !p.defend);
                 if (!hasUndefended) {
+                    // Если всё отбито, ход возвращается Атакующему (чтобы подкинуть или сказать Бито)
                     newTurn = localState.attacker;
                     if (GAME_MODE === 'OFFLINE') startBotTimer();
                 }
@@ -455,33 +457,41 @@
         }
 
         async function processAction(action) {
-            const myUid = GAME_MODE === 'OFFLINE' ? 'player' : currentUser.uid;
-            const oppId = GAME_MODE === 'OFFLINE' ? 'bot' : (localState.hostId === myUid ? localState.joinerId : localState.hostId);
+            // Определяем, кто сейчас Атакующий и Защитник ИСХОДЯ ИЗ СОСТОЯНИЯ
+            const currentAttackerId = localState.attacker;
+            const currentDefenderId = (currentAttackerId === localState.hostId) ? localState.joinerId : localState.hostId;
             
             let d = [...localState.deck];
             let h = JSON.parse(JSON.stringify(localState.hands));
             let t = [];
-            let newAttacker = localState.attacker;
-            let newTurn = localState.turn;
+            let newAttacker = null;
+            let newTurn = null;
 
             if (action === 'bito') {
-                [myUid, oppId].forEach(uid => {
+                // БИТО (Успешная защита)
+                // Карты в отбой (t = []).
+                // Добор карт: Сначала Атакующий, потом Защитник.
+                [currentAttackerId, currentDefenderId].forEach(uid => {
                     while(h[uid].length < 6 && d.length > 0) h[uid].push(d.pop());
                 });
-                newAttacker = oppId; 
-                newTurn = oppId;
-                if (GAME_MODE === 'OFFLINE') startBotTimer();
+
+                // СМЕНА РОЛЕЙ: Защитник, который отбился, становится Атакующим
+                newAttacker = currentDefenderId;
+                newTurn = currentDefenderId;
 
             } else if (action === 'take') {
+                // ВЗЯТЬ (Провал защиты)
+                // Защитник забирает карты
                 let cardsToTake = [];
                 localState.table.forEach(p => { cardsToTake.push(p.attack); if(p.defend) cardsToTake.push(p.defend); });
-                h[myUid] = [...h[myUid], ...cardsToTake];
+                h[currentDefenderId] = [...h[currentDefenderId], ...cardsToTake];
                 
-                while(h[oppId].length < 6 && d.length > 0) h[oppId].push(d.pop());
+                // Атакующий добирает карты
+                while(h[currentAttackerId].length < 6 && d.length > 0) h[currentAttackerId].push(d.pop());
                 
-                newAttacker = oppId; 
-                newTurn = oppId;
-                if (GAME_MODE === 'OFFLINE') startBotTimer();
+                // РОЛИ НЕ МЕНЯЮТСЯ: Тот кто атаковал, атакует снова (так как защитник "пропустил" свой шанс атаковать)
+                newAttacker = currentAttackerId; 
+                newTurn = currentAttackerId;
             }
 
             if (GAME_MODE === 'ONLINE') {
@@ -492,6 +502,9 @@
                 localState.deck = d; localState.hands = h; localState.table = t;
                 localState.attacker = newAttacker; localState.turn = newTurn;
                 renderGame(localState);
+                
+                // Если в офлайне сейчас ход бота - запускаем его
+                if (newTurn === 'bot') startBotTimer();
             }
         }
 
@@ -511,10 +524,12 @@
             const amIAttacker = state.attacker === 'bot';
 
             if (amIAttacker) {
+                // БОТ АТАКУЕТ
                 if (state.table.length === 0) {
                     const c = getLowestCard(botHand, state.trumpSuit);
                     botApplyMove(c, 'attack');
                 } else {
+                    // Подкидывание
                     const ranks = new Set();
                     state.table.forEach(p => { ranks.add(p.attack.rank); if(p.defend) ranks.add(p.defend.rank); });
                     const options = botHand.filter(c => ranks.has(c.rank)).sort((a,b) => getCardPower(a, state.trumpSuit) - getCardPower(b, state.trumpSuit));
@@ -522,10 +537,11 @@
                     if (options.length > 0 && state.table.length < 6) {
                         botApplyMove(options[0], 'attack');
                     } else {
-                        processAction('bito'); 
+                        processAction('bito'); // Бот жмет Бито
                     }
                 }
             } else {
+                // БОТ ЗАЩИЩАЕТСЯ
                 const pairIdx = state.table.findIndex(p => !p.defend);
                 
                 if (pairIdx === -1) { return; }
@@ -537,7 +553,7 @@
                     beaters.sort((a,b) => getCardPower(a, state.trumpSuit) - getCardPower(b, state.trumpSuit));
                     botApplyMove(beaters[0], 'defend', pairIdx);
                 } else {
-                    processAction('take'); 
+                    processAction('take'); // Бот жмет Взять
                 }
             }
         }
@@ -709,4 +725,5 @@
         window.showToast=(m)=>{const t=document.getElementById('toast');t.innerText=m;t.classList.remove('opacity-0','scale-90');setTimeout(()=>t.classList.add('opacity-0','scale-90'),2000);}
     </script>
 </body>
-</html>мм
+</html>
+
