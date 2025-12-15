@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Дурак: Ultimate Green</title>
+    <title>Дурак: Ultimate Green (Stable)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -18,6 +18,7 @@
             user-select: none;
             touch-action: manipulation;
             color: #1a202c;
+            -webkit-tap-highlight-color: transparent;
         }
 
         /* --- КАРТЫ --- */
@@ -30,20 +31,14 @@
             transition: transform 0.2s, box-shadow 0.2s, top 0.2s, left 0.2s;
             cursor: pointer; border: 1px solid #ccc;
             flex-shrink: 0;
+            z-index: 10;
         }
         .card:hover { transform: translateY(-15px); z-index: 100 !important; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         .suit-red { color: #e53e3e; }
         .suit-black { color: #1a202c; }
-        
-        /* Джокер */
-        .card-joker {
-            background: linear-gradient(135deg, #7e22ce, #a855f7);
-            color: white; border: 2px solid #facc15;
-        }
+        .card-joker { background: linear-gradient(135deg, #7e22ce, #a855f7); color: white; border: 2px solid #facc15; }
 
-        @media (min-width: 640px) {
-            .card { width: 90px; height: 135px; padding: 6px; }
-        }
+        @media (min-width: 640px) { .card { width: 90px; height: 135px; padding: 6px; } }
 
         /* --- ЗОНЫ --- */
         #game-table {
@@ -55,46 +50,28 @@
         }
         .table-slot { width: 80px; height: 120px; margin: 2px 4px; position: relative; pointer-events: none; }
 
-        /* Фантомная карта (для выбора перевода) */
+        /* Фантом */
         .phantom-card {
             position: absolute; top: 0; right: -85px; 
             width: 70px; height: 105px;
-            border: 3px dashed #60a5fa;
-            background: rgba(37, 99, 235, 0.4);
-            border-radius: 6px;
+            border: 3px dashed #60a5fa; background: rgba(37, 99, 235, 0.4); border-radius: 6px;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             color: white; cursor: pointer; pointer-events: auto;
-            animation: pulse-blue 1.5s infinite;
-            backdrop-filter: blur(2px);
-            z-index: 50; text-align: center;
+            animation: pulse-blue 1.5s infinite; backdrop-filter: blur(2px); z-index: 50; text-align: center;
         }
         .phantom-card:hover { background: rgba(37, 99, 235, 0.6); transform: scale(1.05); }
 
-        /* Подсветка цели для битья */
-        .beat-target {
-            box-shadow: 0 0 0 4px #ef4444 !important;
-            cursor: pointer !important;
-            pointer-events: auto !important;
-            animation: pulse-red 1.5s infinite;
-            z-index: 40 !important;
-        }
-
-        /* Подсветка карты в руке при выборе */
-        .card-selected-action {
-            transform: translateY(-40px) scale(1.1) !important;
-            box-shadow: 0 0 20px #facc15 !important;
-            border: 3px solid #facc15 !important;
-            z-index: 999 !important;
-        }
+        /* UI Элементы */
+        .beat-target { box-shadow: 0 0 0 4px #ef4444 !important; cursor: pointer !important; pointer-events: auto !important; animation: pulse-red 1.5s infinite; z-index: 40 !important; }
+        .card-selected-action { transform: translateY(-40px) scale(1.1) !important; box-shadow: 0 0 20px #facc15 !important; border: 3px solid #facc15 !important; z-index: 999 !important; }
         .card-swapping { border: 3px solid #facc15 !important; transform: translateY(-30px) !important; z-index: 50; }
 
-        /* Анимации */
         @keyframes pulse-blue { 0% { box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(96, 165, 250, 0); } 100% { box-shadow: 0 0 0 0 rgba(96, 165, 250, 0); } }
         @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         @keyframes pulse-shield { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); } 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } }
         .shield-active { animation: pulse-shield 2s infinite; border: 2px solid #60a5fa !important; }
 
-        /* Рука (Скролл) */
+        /* Скролл руки */
         #player-hand-container {
             position: absolute; bottom: 0; left: 0; width: 100%; height: 160px;
             display: flex; justify-content: center; z-index: 20;
@@ -111,23 +88,21 @@
         .opponent-card-back {
             width: 50px; height: 80px; margin-left: -30px;
             background: repeating-linear-gradient(45deg, #1e3a8a, #1e3a8a 5px, #2563eb 5px, #2563eb 10px);
-            border: 2px solid white; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            transition: all 0.3s;
+            border: 2px solid white; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: all 0.3s;
         }
         .opponent-card-revealed { background: white !important; transform: translateY(10px) scale(1.1); z-index: 50; }
 
-        /* UI Кнопки */
+        /* Кнопки */
         .btn-action {
-            padding: 0.8rem 2.5rem; border-radius: 12px; font-weight: 800; font-size: 1.2rem;
-            box-shadow: 0 6px 0 rgba(0,0,0,0.2); transition: all 0.1s; cursor: pointer;
+            padding: 1rem 3rem; border-radius: 999px; font-weight: 800; font-size: 1.2rem;
+            box-shadow: 0 10px 15px rgba(0,0,0,0.3); transition: all 0.1s; cursor: pointer;
             border: 2px solid rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px;
-            pointer-events: auto;
+            pointer-events: auto; transform: scale(1);
         }
-        .btn-action:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
-        .btn-bito { background: #22c55e; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3); } 
-        .btn-take { background: #ef4444; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        .btn-action:active { transform: scale(0.95); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .btn-bito { background: linear-gradient(to bottom, #22c55e, #16a34a); color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5); } 
+        .btn-take { background: linear-gradient(to bottom, #ef4444, #dc2626); color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 
-        /* Магия Кнопки */
         .magic-btn {
             width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
             font-size: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: all 0.2s; cursor: pointer;
@@ -135,23 +110,17 @@
         }
         .magic-btn:hover { transform: scale(1.1); }
         .magic-btn:disabled { opacity: 0.5; filter: grayscale(100%); cursor: not-allowed; transform: none; }
-        .magic-tooltip {
-            position: absolute; right: 45px; font-size: 0.6rem; white-space: nowrap; font-weight: bold; 
-            background: rgba(0,0,0,0.7); padding: 2px 6px; rounded; pointer-events: none;
-        }
+        .magic-tooltip { position: absolute; right: 45px; font-size: 0.6rem; white-space: nowrap; font-weight: bold; background: rgba(0,0,0,0.7); padding: 2px 6px; rounded; pointer-events: none; }
 
-        /* Меню выбора */
         .option-btn { flex: 1; padding: 0.5rem; font-size: 0.8rem; font-weight: 700; border-radius: 0.5rem; transition: all 0.2s; border: 1px solid #d1d5db; }
         .option-btn.active { background-color: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .option-btn:not(.active) { background-color: white; color: #4b5563; hover:bg-gray-100; }
 
         #lobby-screen { z-index: 1000; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); }
         #game-over-screen { z-index: 2000; background: rgba(0,0,0,0.9); backdrop-filter: blur(8px); }
-        
-        /* Эффект магии */
+        #error-modal { z-index: 3000; background: rgba(0,0,0,0.9); backdrop-filter: blur(4px); }
         #effect-overlay { z-index: 1500; }
 
-        /* Скролл для списка комнат */
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #888; border-radius: 2px; }
@@ -159,6 +128,16 @@
     </style>
 </head>
 <body class="h-screen w-screen text-gray-800 select-none" onclick="globalClick(event)">
+
+    <!-- ERROR MODAL -->
+    <div id="error-modal" class="fixed inset-0 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm text-center mx-4">
+            <div class="text-red-500 text-4xl mb-2"><i class="fas fa-exclamation-circle"></i></div>
+            <h3 class="text-xl font-bold mb-2 text-gray-800">Ошибка</h3>
+            <p id="error-text" class="text-sm text-gray-600 mb-4">Ошибка подключения.</p>
+            <button onclick="closeErrorModal()" class="bg-gray-200 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-300">ОК</button>
+        </div>
+    </div>
 
     <!-- GAME OVER -->
     <div id="game-over-screen" class="fixed inset-0 flex items-center justify-center text-white hidden opacity-0 transition-opacity duration-500">
@@ -170,85 +149,101 @@
     </div>
 
     <!-- ЛОББИ -->
-    <div id="lobby-screen" class="fixed inset-0 flex items-center justify-center text-white">
-        <div class="bg-white text-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 relative overflow-hidden flex flex-col max-h-[90vh]">
-            <h1 class="text-3xl font-bold mb-2 text-center text-blue-800">Дурак</h1>
-            <p class="text-center text-gray-500 mb-4 text-sm uppercase tracking-widest font-bold">Ultimate Green</p>
+    <div id="lobby-screen" class="fixed inset-0 flex items-center justify-center text-white p-4">
+        <!-- Контейнер для двух колонок -->
+        <div class="flex flex-col md:flex-row gap-6 w-full max-w-5xl justify-center items-start h-full md:h-auto overflow-y-auto md:overflow-visible">
             
-            <div id="lobby-main" class="space-y-4 overflow-y-auto custom-scroll pr-1">
-                <!-- Режим -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Режим игры</label>
-                    <div class="flex gap-2 bg-gray-100 p-1 rounded-lg">
-                        <button onclick="setMode('classic')" id="opt-mode-classic" class="option-btn active">Подкидной</button>
-                        <button onclick="setMode('transfer')" id="opt-mode-transfer" class="option-btn">Переводной</button>
-                    </div>
-                </div>
-                <!-- Колода -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Размер колоды</label>
-                    <div class="flex gap-2 bg-gray-100 p-1 rounded-lg">
-                        <button onclick="setDeck(24)" id="opt-deck-24" class="option-btn">24</button>
-                        <button onclick="setDeck(36)" id="opt-deck-36" class="option-btn active">36</button>
-                        <button onclick="setDeck(52)" id="opt-deck-52" class="option-btn">52</button>
-                    </div>
-                </div>
-                <!-- Магия -->
-                <div class="flex items-center justify-between bg-blue-50 p-3 rounded-lg border border-blue-100 cursor-pointer hover:bg-blue-100 transition" onclick="toggleMagic()">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white shadow"><i class="fas fa-hat-wizard"></i></div>
-                        <div>
-                            <div class="font-bold text-sm text-gray-700">Магический Режим</div>
-                            <div class="text-[10px] text-gray-500">Джокер, Рентген, Щит</div>
+            <!-- ЛЕВАЯ КОЛОНКА: МЕНЮ -->
+            <div class="bg-white text-gray-800 p-6 rounded-2xl shadow-2xl w-full md:w-[400px] relative shrink-0">
+                <h1 class="text-3xl font-bold mb-2 text-center text-blue-800 font-['Russo_One']">Дурак</h1>
+                <p class="text-center text-gray-500 mb-6 text-sm uppercase tracking-widest font-bold">Ultimate Green</p>
+
+                <div id="lobby-main" class="space-y-4">
+                    <!-- Режим -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Режим игры</label>
+                        <div class="flex gap-2 bg-gray-100 p-1 rounded-lg">
+                            <button onclick="setMode('classic')" id="opt-mode-classic" class="option-btn active">Подкидной</button>
+                            <button onclick="setMode('transfer')" id="opt-mode-transfer" class="option-btn">Переводной</button>
                         </div>
                     </div>
-                    <div id="magic-toggle" class="w-6 h-6 rounded border-2 border-gray-400 bg-white flex items-center justify-center text-xs text-transparent transition-colors">
-                        <i class="fas fa-check"></i>
+                    <!-- Колода -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Размер колоды</label>
+                        <div class="flex gap-2 bg-gray-100 p-1 rounded-lg">
+                            <button onclick="setDeck(24)" id="opt-deck-24" class="option-btn">24</button>
+                            <button onclick="setDeck(36)" id="opt-deck-36" class="option-btn active">36</button>
+                            <button onclick="setDeck(52)" id="opt-deck-52" class="option-btn">52</button>
+                        </div>
+                    </div>
+                    <!-- Магия -->
+                    <div class="flex items-center justify-between bg-blue-50 p-3 rounded-lg border border-blue-100 cursor-pointer hover:bg-blue-100 transition" onclick="toggleMagic()">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white shadow"><i class="fas fa-hat-wizard"></i></div>
+                            <div>
+                                <div class="font-bold text-sm text-gray-700">Магический Режим</div>
+                                <div class="text-[10px] text-gray-500">Джокер, Рентген, Щит</div>
+                            </div>
+                        </div>
+                        <div id="magic-toggle" class="w-6 h-6 rounded border-2 border-gray-400 bg-white flex items-center justify-center text-xs text-transparent transition-colors">
+                            <i class="fas fa-check"></i>
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-4">
+                        <button onclick="startOfflineGame()" class="w-full bg-gradient-to-r from-green-600 to-green-700 text-white font-bold py-4 rounded-lg shadow-lg hover:brightness-110 transition flex items-center justify-center gap-2 text-lg active:scale-95 transform duration-100">
+                            <i class="fas fa-play"></i> Играть с Ботом
+                        </button>
+                    </div>
+
+                    <div class="text-center">
+                        <p class="text-xs text-gray-400 mb-2 mt-2 font-bold">ОНЛАЙН (BETA)</p>
+                        <div id="online-controls" class="space-y-2 transition-opacity">
+                            <button onclick="createOnlineGame()" class="w-full bg-blue-100 text-blue-700 font-bold py-2 rounded-lg text-sm hover:bg-blue-200 active:bg-blue-300">Создать Свою</button>
+                            <div class="flex gap-2">
+                                <input id="join-game-id" type="text" placeholder="ID (6 цифр)" class="flex-1 border-2 border-gray-300 p-2 rounded-lg text-center font-mono uppercase text-sm">
+                                <button onclick="joinOnlineGame()" class="bg-blue-600 text-white font-bold px-4 rounded-lg text-sm hover:bg-blue-700 active:bg-blue-800">Войти</button>
+                            </div>
+                        </div>
+                        <div id="auth-status" class="text-[10px] text-gray-400 mt-1">Проверка подключения...</div>
                     </div>
                 </div>
 
-                <div class="border-t pt-4">
-                    <button onclick="startOfflineGame()" class="w-full bg-gradient-to-r from-green-600 to-green-700 text-white font-bold py-4 rounded-lg shadow-lg hover:brightness-110 transition flex items-center justify-center gap-2 text-lg">
-                        <i class="fas fa-play"></i> Играть с Ботом
+                <!-- Экран ожидания (внутри левой панели) -->
+                <div id="waiting-room" class="hidden absolute inset-0 bg-white z-10 flex flex-col items-center justify-center rounded-2xl">
+                    <h2 class="text-xl font-bold mb-2 text-gray-800">Ожидание...</h2>
+                    <div class="bg-yellow-100 p-4 rounded-lg mb-4 border-2 border-yellow-300">
+                        <div class="text-sm text-gray-600">Код комнаты:</div>
+                        <div id="display-game-id" class="text-4xl font-mono font-bold tracking-widest text-blue-700 select-all cursor-pointer" onclick="copyId()">------</div>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4 px-8 text-center">Сообщите этот код другу или ждите, пока кто-то войдет из списка.</p>
+                    <button onclick="leaveGame()" class="text-red-500 hover:underline text-sm font-bold">Отмена</button>
+                </div>
+            </div>
+
+            <!-- ПРАВАЯ КОЛОНКА: ОТКРЫТЫЕ КОМНАТЫ -->
+            <div class="bg-white text-gray-800 p-6 rounded-2xl shadow-2xl w-full md:w-[320px] h-64 md:h-[550px] flex flex-col relative shrink-0">
+                <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-2">
+                    <span class="text-sm font-bold text-gray-600 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fas fa-globe text-blue-500"></i> Открытые Игры
+                    </span>
+                    <button onclick="refreshRoomList()" class="bg-blue-50 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center hover:bg-blue-100 transition active:rotate-180 duration-300 shadow-sm" title="Обновить">
+                        <i class="fas fa-sync-alt text-xs"></i>
                     </button>
                 </div>
-
-                <div class="text-center">
-                    <p class="text-xs text-gray-400 mb-2 mt-2 font-bold">ОНЛАЙН</p>
-                    <div id="online-controls" class="space-y-2 opacity-50 pointer-events-none transition-opacity">
-                        <button onclick="createOnlineGame()" class="w-full bg-blue-100 text-blue-700 font-bold py-2 rounded-lg text-sm hover:bg-blue-200">Создать</button>
-                        <div class="flex gap-2">
-                            <input id="join-game-id" type="text" placeholder="ID (6 цифр)" class="flex-1 border-2 border-gray-300 p-2 rounded-lg text-center font-mono uppercase text-sm">
-                            <button onclick="joinOnlineGame()" class="bg-blue-600 text-white font-bold px-4 rounded-lg text-sm">Войти</button>
-                        </div>
+                
+                <div id="rooms-list" class="flex-1 overflow-y-auto custom-scroll space-y-2 pr-1">
+                    <div class="flex flex-col items-center justify-center h-full text-gray-400 gap-2 opacity-50">
+                        <i class="fas fa-ghost text-3xl"></i>
+                        <span class="text-xs">Нажмите обновить...</span>
                     </div>
-                    
-                    <!-- СПИСОК КОМНАТ -->
-                    <div class="mt-4 border-t border-gray-200 pt-2">
-                        <div class="flex justify-between items-center mb-2 px-1">
-                            <span class="text-xs font-bold text-gray-500 uppercase">Открытые комнаты</span>
-                            <button onclick="refreshRoomList()" class="text-blue-500 hover:text-blue-700 transition" title="Обновить список">
-                                <i class="fas fa-sync-alt text-xs"></i>
-                            </button>
-                        </div>
-                        <div id="rooms-list" class="space-y-2 max-h-32 overflow-y-auto custom-scroll text-left bg-gray-50 p-2 rounded-lg border border-gray-200 min-h-[60px]">
-                            <div class="text-[10px] text-center text-gray-400 py-4">Нажмите <i class="fas fa-sync-alt"></i> чтобы найти игры</div>
-                        </div>
-                    </div>
-                    
-                    <div id="auth-status" class="text-[10px] text-gray-400 mt-1">Требуется конфиг</div>
+                </div>
+                
+                <div class="text-[10px] text-gray-400 text-center mt-2 border-t pt-2">
+                    Кликните на комнату для входа
                 </div>
             </div>
 
-            <!-- Экран ожидания -->
-            <div id="waiting-room" class="hidden text-center">
-                <h2 class="text-xl font-bold mb-2 text-gray-800">Ожидание...</h2>
-                <div class="bg-yellow-100 p-4 rounded-lg mb-4 border-2 border-yellow-300">
-                    <div class="text-sm text-gray-600">Код комнаты:</div>
-                    <div id="display-game-id" class="text-4xl font-mono font-bold tracking-widest text-blue-700 select-all cursor-pointer" onclick="copyId()">------</div>
-                </div>
-                <button onclick="leaveGame()" class="text-red-500 hover:underline text-sm">Отмена</button>
-            </div>
         </div>
     </div>
 
@@ -302,10 +297,10 @@
 
         <div id="game-table"></div>
 
-        <!-- КНОПКИ -->
-        <div id="action-area" class="absolute bottom-48 left-1/2 transform -translate-x-1/2 z-[999] flex gap-6 hidden">
-            <button id="btn-bito" onclick="performAction('bito')" class="btn-action btn-bito hidden shadow-lg">БИТО!</button>
-            <button id="btn-take" onclick="performAction('take')" class="btn-action btn-take hidden shadow-lg">ВЗЯТЬ</button>
+        <!-- КНОПКИ (Z-Index 2000, Pointer-Events AUTO) -->
+        <div id="action-area" class="absolute bottom-48 left-1/2 transform -translate-x-1/2 z-[2000] flex gap-6 hidden w-full justify-center pointer-events-none">
+            <button id="btn-bito" onclick="performAction('bito')" class="btn-action btn-bito hidden shadow-lg pointer-events-auto">БИТО!</button>
+            <button id="btn-take" onclick="performAction('take')" class="btn-action btn-take hidden shadow-lg pointer-events-auto">ВЗЯТЬ</button>
         </div>
 
         <!-- РУКА (СКРОЛЛ) -->
@@ -429,7 +424,6 @@
             listEl.innerHTML = '<div class="text-center py-2"><i class="fas fa-spinner fa-spin text-gray-400"></i></div>';
             
             try {
-                // Rule: Fetch all and filter in memory
                 const snap = await getDocs(gamesRef);
                 const rooms = [];
                 snap.forEach(doc => {
@@ -441,26 +435,29 @@
                 
                 listEl.innerHTML = '';
                 if (rooms.length === 0) {
-                    listEl.innerHTML = '<div class="text-[10px] text-gray-400 text-center py-2">Нет открытых игр</div>';
+                    listEl.innerHTML = '<div class="text-[10px] text-gray-400 text-center py-2 flex flex-col items-center"><i class="far fa-folder-open mb-1"></i>Нет открытых игр</div>';
                     return;
                 }
                 
                 rooms.forEach(r => {
                     const div = document.createElement('div');
-                    div.className = 'bg-white p-2 rounded border border-gray-200 flex justify-between items-center cursor-pointer hover:bg-blue-50 transition shadow-sm';
+                    div.className = 'bg-white p-2.5 rounded-lg border border-gray-200 flex justify-between items-center cursor-pointer hover:bg-blue-50 transition shadow-sm group';
                     div.onclick = () => {
                         document.getElementById('join-game-id').value = r.id;
                         joinOnlineGame(r.id);
                     };
-                    const modeText = r.config ? (r.config.mode === 'transfer' ? 'Перевод' : 'Классика') : 'Классика';
+                    const modeText = r.config ? (r.config.mode === 'transfer' ? 'Переводной' : 'Подкидной') : 'Подкидной';
                     const deckText = r.config ? r.config.deckSize : '36';
                     
                     div.innerHTML = `
-                        <div>
-                            <div class="text-xs font-bold text-gray-700">Комната #${r.id}</div>
-                            <div class="text-[10px] text-gray-500">${modeText}, ${deckText} карт</div>
+                        <div class="flex items-center gap-2">
+                             <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">#${r.id.substring(0,1)}</div>
+                             <div>
+                                <div class="text-xs font-bold text-gray-700">Комната ${r.id}</div>
+                                <div class="text-[10px] text-gray-500 font-medium">${modeText}, ${deckText}</div>
+                            </div>
                         </div>
-                        <span class="text-[9px] bg-green-100 text-green-600 px-1.5 py-0.5 rounded font-bold uppercase">Вход</span>
+                        <span class="text-[9px] bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold uppercase group-hover:bg-green-200 transition">Вход</span>
                     `;
                     listEl.appendChild(div);
                 });
@@ -520,7 +517,10 @@
         // --- ОНЛАЙН ---
         window.createOnlineGame = async () => {
             try {
-                if (!isFirebaseReady) return showToast("Нет подключения к серверу");
+                if (!isFirebaseReady) {
+                    showError("Нет подключения к серверу. Попробуйте обновить.");
+                    return;
+                }
                 GAME_MODE = 'ONLINE';
                 const gameId = Math.floor(100000 + Math.random() * 900000).toString();
                 const deck = createDeck(GAME_CONFIG.deckSize); 
@@ -542,29 +542,41 @@
 
                 await setDoc(doc(gamesRef, gameId), state);
                 currentGameId = gameId;
+                // Скрываем меню, показываем ожидание
                 document.getElementById('lobby-screen').classList.add('hidden');
                 document.getElementById('waiting-room').classList.remove('hidden');
+                // Важно: вставить Waiting Room обратно в DOM, если он был скрыт внутри лобби
+                // У нас он внутри .bg-white wrapper, поэтому просто показываем его
+                const waitingRoom = document.getElementById('waiting-room');
+                const lobbyMain = document.getElementById('lobby-main');
+                lobbyMain.classList.add('hidden');
+                waitingRoom.classList.remove('hidden');
+                // Показываем сам экран лобби, если он был скрыт
+                document.getElementById('lobby-screen').classList.remove('hidden');
+
                 document.getElementById('display-game-id').innerText = gameId;
                 subscribeToGame(gameId);
             } catch (e) {
                 console.error("Create Game Error:", e);
-                showToast("Ошибка создания игры");
-                leaveGame();
+                showError("Не удалось создать игру: " + e.message);
             }
         };
 
         window.joinOnlineGame = async (optId) => {
             try {
-                if (!isFirebaseReady) return showToast("Нет подключения");
+                if (!isFirebaseReady) {
+                    showError("Нет подключения.");
+                    return;
+                }
                 const inputId = optId || document.getElementById('join-game-id').value.trim();
-                if (inputId.length !== 6) return showToast("Нужен ID из 6 цифр");
+                if (inputId.length !== 6) return showToast("ID должен быть из 6 цифр");
                 GAME_MODE = 'ONLINE';
 
                 const gameRef = doc(gamesRef, inputId);
                 const snap = await getDoc(gameRef);
-                if (!snap.exists()) return showToast("Игра не найдена");
+                if (!snap.exists()) return showError("Комната не найдена");
                 const data = snap.data();
-                if (data.status !== 'waiting') return showToast("Игра занята");
+                if (data.status !== 'waiting') return showError("Игра уже идет");
 
                 // Применяем настройки хоста
                 GAME_CONFIG.deckSize = data.config.deckSize;
@@ -589,15 +601,14 @@
                 subscribeToGame(inputId);
             } catch (e) {
                 console.error("Join Game Error:", e);
-                showToast("Ошибка подключения");
-                leaveGame();
+                showError("Ошибка входа: " + e.message);
             }
         };
         
         function subscribeToGame(id) {
             unsubscribeGame = onSnapshot(doc(gamesRef, id), (snap) => {
                 if(!snap.exists()) {
-                    showToast("Игра завершена");
+                    showToast("Игра завершена или отменена");
                     leaveGame();
                     return;
                 }
@@ -620,8 +631,7 @@
                 }
             }, (error) => {
                  console.error("Snapshot error:", error);
-                 showToast("Ошибка синхронизации");
-                 leaveGame();
+                 // Don't leave game immediately on error to avoid flicker, just toast
             });
         }
 
@@ -1130,10 +1140,16 @@
             document.getElementById('game-ui').classList.add('hidden');
             document.getElementById('waiting-room').classList.add('hidden');
             document.getElementById('lobby-screen').classList.remove('hidden');
+            // FIX: Restore lobby layout visibility
             document.getElementById('lobby-main').classList.remove('hidden'); 
             localState = null;
         };
         window.hideGameOver = () => document.getElementById('game-over-screen').classList.add('hidden');
+        window.closeErrorModal = () => document.getElementById('error-modal').classList.add('hidden');
+        window.showError = (msg) => {
+            document.getElementById('error-text').innerText = msg;
+            document.getElementById('error-modal').classList.remove('hidden');
+        };
         window.showGameUI = () => { document.getElementById('lobby-screen').classList.add('hidden'); document.getElementById('game-ui').classList.remove('hidden'); };
         window.showToast = (m) => { const t=document.getElementById('toast'); t.innerText=m; t.classList.remove('opacity-0','scale-90'); setTimeout(()=>t.classList.add('opacity-0','scale-90'), 2000); };
         function showEffect(txt) {
@@ -1145,4 +1161,3 @@
     </script>
 </body>
 </html>
-
