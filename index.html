@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Дурак: Ultimate Green (Stable)</title>
+    <title>Дурак: Project 1 (Stable)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -156,9 +156,13 @@
             <!-- ЛЕВАЯ КОЛОНКА: МЕНЮ -->
             <div class="bg-white text-gray-800 p-6 rounded-2xl shadow-2xl w-full md:w-[400px] relative shrink-0">
                 <h1 class="text-3xl font-bold mb-2 text-center text-blue-800 font-['Russo_One']">Дурак</h1>
-                <p class="text-center text-gray-500 mb-6 text-sm uppercase tracking-widest font-bold">Ultimate Green</p>
+                <p class="text-center text-gray-500 mb-4 text-sm uppercase tracking-widest font-bold">Project 1</p>
+                <div class="text-center text-[10px] text-gray-400 mb-4 pb-2 border-b">Версия с Переводным (Онлайн/Офлайн)</div>
 
                 <div id="lobby-main" class="space-y-4">
+                    <!-- Заголовок настроек -->
+                    <div class="text-xs font-bold text-gray-400 uppercase tracking-widest text-center mb-1">Настройки Матча</div>
+                    
                     <!-- Режим -->
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Режим игры</label>
@@ -182,7 +186,7 @@
                             <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white shadow"><i class="fas fa-hat-wizard"></i></div>
                             <div>
                                 <div class="font-bold text-sm text-gray-700">Магический Режим</div>
-                                <div class="text-[10px] text-gray-500">Джокер, Рентген, Щит</div>
+                                <div class="text-[10px] text-gray-500">Только с Ботом</div>
                             </div>
                         </div>
                         <div id="magic-toggle" class="w-6 h-6 rounded border-2 border-gray-400 bg-white flex items-center justify-center text-xs text-transparent transition-colors">
@@ -197,9 +201,12 @@
                     </div>
 
                     <div class="text-center">
-                        <p class="text-xs text-gray-400 mb-2 mt-2 font-bold">ОНЛАЙН (BETA)</p>
+                        <p class="text-xs text-gray-400 mb-2 mt-2 font-bold uppercase">Онлайн (PVP)</p>
                         <div id="online-controls" class="space-y-2 transition-opacity">
-                            <button onclick="createOnlineGame()" class="w-full bg-blue-100 text-blue-700 font-bold py-2 rounded-lg text-sm hover:bg-blue-200 active:bg-blue-300">Создать Свою</button>
+                            <button onclick="createOnlineGame()" id="btn-create-online" class="w-full bg-blue-100 text-blue-700 font-bold py-2 rounded-lg text-sm hover:bg-blue-200 active:bg-blue-300 leading-tight">
+                                Создать Свою
+                                <span class="text-[10px] opacity-70 block font-normal">(Подкидной, 36)</span>
+                            </button>
                             <div class="flex gap-2">
                                 <input id="join-game-id" type="text" placeholder="ID (6 цифр)" class="flex-1 border-2 border-gray-300 p-2 rounded-lg text-center font-mono uppercase text-sm">
                                 <button onclick="joinOnlineGame()" class="bg-blue-600 text-white font-bold px-4 rounded-lg text-sm hover:bg-blue-700 active:bg-blue-800">Войти</button>
@@ -402,11 +409,13 @@
             GAME_CONFIG.mode = m;
             document.querySelectorAll('[id^="opt-mode-"]').forEach(el => el.classList.remove('active'));
             document.getElementById(`opt-mode-${m}`).classList.add('active');
+            updateCreateButton();
         };
         window.setDeck = (s) => {
             GAME_CONFIG.deckSize = s;
             document.querySelectorAll('[id^="opt-deck-"]').forEach(el => el.classList.remove('active'));
             document.getElementById(`opt-deck-${s}`).classList.add('active');
+            updateCreateButton();
         };
         window.toggleMagic = () => {
             GAME_CONFIG.magic = !GAME_CONFIG.magic;
@@ -417,6 +426,12 @@
                 check.classList.add('text-transparent'); check.classList.remove('bg-purple-600', 'border-purple-600', 'text-white');
             }
         };
+
+        function updateCreateButton() {
+            const mode = GAME_CONFIG.mode === 'transfer' ? 'Переводной' : 'Подкидной';
+            const btn = document.getElementById('btn-create-online');
+            if(btn) btn.innerHTML = `Создать Свою <span class="text-[10px] opacity-70 block font-normal">(${mode}, ${GAME_CONFIG.deckSize})</span>`;
+        }
         
         window.refreshRoomList = async () => {
             if (!isFirebaseReady) return showToast("Нет подключения");
@@ -545,13 +560,11 @@
                 // Скрываем меню, показываем ожидание
                 document.getElementById('lobby-screen').classList.add('hidden');
                 document.getElementById('waiting-room').classList.remove('hidden');
-                // Важно: вставить Waiting Room обратно в DOM, если он был скрыт внутри лобби
-                // У нас он внутри .bg-white wrapper, поэтому просто показываем его
+                
                 const waitingRoom = document.getElementById('waiting-room');
                 const lobbyMain = document.getElementById('lobby-main');
                 lobbyMain.classList.add('hidden');
                 waitingRoom.classList.remove('hidden');
-                // Показываем сам экран лобби, если он был скрыт
                 document.getElementById('lobby-screen').classList.remove('hidden');
 
                 document.getElementById('display-game-id').innerText = gameId;
@@ -631,7 +644,6 @@
                 }
             }, (error) => {
                  console.error("Snapshot error:", error);
-                 // Don't leave game immediately on error to avoid flicker, just toast
             });
         }
 
