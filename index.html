@@ -28,12 +28,12 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
             display: flex; flex-direction: column; justify-content: space-between;
             padding: 4px; position: absolute;
-            transition: transform 0.2s, box-shadow 0.2s, top 0.2s, left 0.2s;
+            transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.2s;
             cursor: pointer; border: 1px solid #ccc;
             flex-shrink: 0;
             z-index: 10;
         }
-        .card:hover { transform: translateY(-15px); z-index: 100 !important; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        /* Убрали transform отсюда, чтобы управлять им через wrapper для руки */
         .suit-red { color: #e53e3e; }
         .suit-black { color: #1a202c; }
         .card-joker { background: linear-gradient(135deg, #7e22ce, #a855f7); color: white; border: 2px solid #facc15; }
@@ -48,7 +48,7 @@
             z-index: 10;
             flex-wrap: wrap;
         }
-        .table-slot { width: 80px; height: 120px; margin: 2px 4px; position: relative; pointer-events: none; }
+        .table-slot { width: 80px; height: 120px; margin: 2px 8px; position: relative; pointer-events: none; }
 
         /* Фантом */
         .phantom-card {
@@ -71,18 +71,48 @@
         @keyframes pulse-shield { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); } 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } }
         .shield-active { animation: pulse-shield 2s infinite; border: 2px solid #60a5fa !important; }
 
-        /* Скролл руки */
+        /* --- ИСПРАВЛЕННАЯ РУКА ИГРОКА --- */
         #player-hand-container {
             position: absolute; bottom: 0; left: 0; width: 100%; height: 160px;
             display: flex; justify-content: center; z-index: 20;
-            overflow-x: auto; padding-bottom: 20px;
-            scroll-behavior: smooth; -ms-overflow-style: none; scrollbar-width: none;
+            overflow-x: visible; /* Разрешаем картам вылетать за границы контейнера при наведении */
+            padding-bottom: 20px;
         }
-        #player-hand-container::-webkit-scrollbar { display: none; }
-        #player-hand { display: flex; align-items: flex-end; padding: 0 20px; min-width: min-content; }
-        .hand-card-wrapper { position: relative; width: 70px; height: 105px; margin-left: -35px; transition: margin 0.2s, transform 0.2s; flex-shrink: 0; }
+        #player-hand { 
+            display: flex; 
+            align-items: flex-end; 
+            padding: 0 20px; 
+            min-width: min-content; 
+            /* Центрируем руку */
+            margin: 0 auto;
+        }
+        
+        .hand-card-wrapper { 
+            position: relative; 
+            width: 70px; 
+            height: 105px; 
+            /* Уменьшили перекрытие, чтобы карты было лучше видно (-30px вместо -35px) */
+            margin-left: -30px; 
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), margin 0.2s; 
+            flex-shrink: 0; 
+            transform-origin: bottom center;
+        }
+        
         .hand-card-wrapper:first-child { margin-left: 0; }
-        @media (hover: hover) { .hand-card-wrapper:hover { margin-right: 30px; transform: translateY(-20px); } }
+        
+        /* КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Z-Index и трансформация при наведении */
+        @media (hover: hover) { 
+            .hand-card-wrapper:hover { 
+                /* Поднимаем карту НАД всеми остальными */
+                z-index: 100 !important; 
+                /* Поднимаем вверх и немного увеличиваем */
+                transform: translateY(-30px) scale(1.1); 
+                /* Добавляем немного места справа, чтобы раздвинуть соседей, но не слишком агрессивно */
+                margin-right: 20px;
+            } 
+            /* Небольшой трюк: когда наводим на руку, остальные карты чуть приглушаем или сдвигаем? Нет, это может бесить. 
+               Оставим только активное выделение. */
+        }
 
         #opponent-hand { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); display: flex; justify-content: center; }
         .opponent-card-back {
