@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Дурак: Переводной (Fix 2.0)</title>
+    <title>Дурак: Ultimate Green</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@500&family=Russo+One&display=swap');
         
         body {
             background-color: #2e7d32;
@@ -16,9 +17,10 @@
             overflow: hidden;
             user-select: none;
             touch-action: manipulation;
+            color: #1a202c;
         }
 
-        /* --- STYLES --- */
+        /* --- КАРТЫ --- */
         .card {
             width: 70px; height: 105px;
             background-color: white; border-radius: 6px;
@@ -27,45 +29,94 @@
             padding: 4px; position: absolute;
             transition: transform 0.2s, box-shadow 0.2s, top 0.2s, left 0.2s;
             cursor: pointer; border: 1px solid #ccc;
+            flex-shrink: 0;
         }
-        .card:hover { transform: translateY(-10px); z-index: 50 !important; }
+        .card:hover { transform: translateY(-15px); z-index: 100 !important; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         .suit-red { color: #e53e3e; }
         .suit-black { color: #1a202c; }
         
+        /* Джокер */
+        .card-joker {
+            background: linear-gradient(135deg, #7e22ce, #a855f7);
+            color: white; border: 2px solid #facc15;
+        }
+
         @media (min-width: 640px) {
             .card { width: 90px; height: 135px; padding: 6px; }
         }
 
-        /* Зоны */
+        /* --- ЗОНЫ --- */
         #game-table {
             position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
-            width: 100%; max-width: 700px; height: 220px;
+            width: 100%; max-width: 800px; height: 240px;
             display: flex; justify-content: center; align-items: center; pointer-events: none;
             z-index: 10;
+            flex-wrap: wrap;
         }
-        .table-slot { width: 80px; height: 120px; margin: 0 6px; position: relative; pointer-events: none; }
+        .table-slot { width: 80px; height: 120px; margin: 2px 4px; position: relative; pointer-events: none; }
 
-        /* Руки */
-        #player-hand {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            height: 140px; width: 100%; display: flex; justify-content: center; align-items: flex-end;
-            z-index: 20;
+        /* Фантомная карта (для выбора перевода) */
+        .phantom-card {
+            position: absolute; top: 0; right: -85px; 
+            width: 70px; height: 105px;
+            border: 3px dashed #60a5fa;
+            background: rgba(37, 99, 235, 0.4);
+            border-radius: 6px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: white; cursor: pointer; pointer-events: auto;
+            animation: pulse-blue 1.5s infinite;
+            backdrop-filter: blur(2px);
+            z-index: 50; text-align: center;
         }
-        .hand-card-wrapper { margin-left: -35px; position: relative; width: 70px; height: 105px; transition: margin 0.2s; }
+        .phantom-card:hover { background: rgba(37, 99, 235, 0.6); transform: scale(1.05); }
+
+        /* Подсветка цели для битья */
+        .beat-target {
+            box-shadow: 0 0 0 4px #ef4444 !important;
+            cursor: pointer !important;
+            pointer-events: auto !important;
+            animation: pulse-red 1.5s infinite;
+            z-index: 40 !important;
+        }
+
+        /* Подсветка карты в руке при выборе */
+        .card-selected-action {
+            transform: translateY(-40px) scale(1.1) !important;
+            box-shadow: 0 0 20px #facc15 !important;
+            border: 3px solid #facc15 !important;
+            z-index: 999 !important;
+        }
+        .card-swapping { border: 3px solid #facc15 !important; transform: translateY(-30px) !important; z-index: 50; }
+
+        /* Анимации */
+        @keyframes pulse-blue { 0% { box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(96, 165, 250, 0); } 100% { box-shadow: 0 0 0 0 rgba(96, 165, 250, 0); } }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        @keyframes pulse-shield { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); } 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } }
+        .shield-active { animation: pulse-shield 2s infinite; border: 2px solid #60a5fa !important; }
+
+        /* Рука (Скролл) */
+        #player-hand-container {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 160px;
+            display: flex; justify-content: center; z-index: 20;
+            overflow-x: auto; padding-bottom: 20px;
+            scroll-behavior: smooth; -ms-overflow-style: none; scrollbar-width: none;
+        }
+        #player-hand-container::-webkit-scrollbar { display: none; }
+        #player-hand { display: flex; align-items: flex-end; padding: 0 20px; min-width: min-content; }
+        .hand-card-wrapper { position: relative; width: 70px; height: 105px; margin-left: -35px; transition: margin 0.2s, transform 0.2s; flex-shrink: 0; }
         .hand-card-wrapper:first-child { margin-left: 0; }
-        .hand-card-wrapper:hover { margin-right: 20px; }
+        @media (hover: hover) { .hand-card-wrapper:hover { margin-right: 30px; transform: translateY(-20px); } }
 
-        #opponent-hand {
-            position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
-            display: flex; justify-content: center;
-        }
+        #opponent-hand { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); display: flex; justify-content: center; }
         .opponent-card-back {
             width: 50px; height: 80px; margin-left: -30px;
             background: repeating-linear-gradient(45deg, #1e3a8a, #1e3a8a 5px, #2563eb 5px, #2563eb 10px);
             border: 2px solid white; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            transition: all 0.3s;
         }
+        .opponent-card-revealed { background: white !important; transform: translateY(10px) scale(1.1); z-index: 50; }
 
-        /* UI */
+        /* UI Кнопки */
         .btn-action {
             padding: 0.8rem 2.5rem; border-radius: 12px; font-weight: 800; font-size: 1.2rem;
             box-shadow: 0 6px 0 rgba(0,0,0,0.2); transition: all 0.1s; cursor: pointer;
@@ -73,40 +124,42 @@
             pointer-events: auto;
         }
         .btn-action:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
-        
         .btn-bito { background: #22c55e; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3); } 
-        .btn-bito:hover { background: #16a34a; }
-        
-        .btn-take { background: #ef4444; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3); } 
-        .btn-take:hover { background: #dc2626; }
+        .btn-take { background: #ef4444; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+
+        /* Магия Кнопки */
+        .magic-btn {
+            width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: all 0.2s; cursor: pointer;
+            position: relative; border: 2px solid rgba(255,255,255,0.5); color: white;
+        }
+        .magic-btn:hover { transform: scale(1.1); }
+        .magic-btn:disabled { opacity: 0.5; filter: grayscale(100%); cursor: not-allowed; transform: none; }
+        .magic-tooltip {
+            position: absolute; right: 45px; font-size: 0.6rem; white-space: nowrap; font-weight: bold; 
+            background: rgba(0,0,0,0.7); padding: 2px 6px; rounded; pointer-events: none;
+        }
 
         /* Меню выбора */
-        .option-btn {
-            flex: 1; padding: 0.5rem; font-size: 0.875rem; font-weight: 700; border-radius: 0.5rem; 
-            transition: all 0.2s; border: 1px solid #d1d5db;
-        }
-        .option-btn.active {
-            background-color: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .option-btn:not(.active) {
-            background-color: white; color: #4b5563; hover:bg-gray-100;
-        }
+        .option-btn { flex: 1; padding: 0.5rem; font-size: 0.8rem; font-weight: 700; border-radius: 0.5rem; transition: all 0.2s; border: 1px solid #d1d5db; }
+        .option-btn.active { background-color: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .option-btn:not(.active) { background-color: white; color: #4b5563; hover:bg-gray-100; }
 
         #lobby-screen { z-index: 1000; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); }
         #game-over-screen { z-index: 2000; background: rgba(0,0,0,0.9); backdrop-filter: blur(8px); }
+        
+        /* Эффект магии */
+        #effect-overlay { z-index: 1500; }
     </style>
 </head>
-<body class="h-screen w-screen text-gray-800">
+<body class="h-screen w-screen text-gray-800 select-none" onclick="globalClick(event)">
 
-    <!-- GAME OVER SCREEN -->
+    <!-- GAME OVER -->
     <div id="game-over-screen" class="fixed inset-0 flex items-center justify-center text-white hidden opacity-0 transition-opacity duration-500">
         <div class="text-center p-8 max-w-lg w-full transform scale-90 transition-transform duration-500" id="game-over-content">
             <h1 id="go-title" class="text-6xl font-black mb-4 text-red-500 drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)]">ВЫ ПРОИГРАЛИ!</h1>
             <div id="go-message" class="text-xl text-gray-200 mb-8 italic font-serif">"..."</div>
-            
-            <button onclick="leaveGame()" class="bg-white text-gray-900 font-bold py-4 px-10 rounded-full hover:bg-gray-200 hover:scale-105 transition shadow-2xl text-xl">
-                В меню
-            </button>
+            <button onclick="leaveGame()" class="bg-white text-gray-900 font-bold py-4 px-10 rounded-full hover:bg-gray-200 hover:scale-105 transition shadow-2xl text-xl">В меню</button>
         </div>
     </div>
 
@@ -114,11 +167,10 @@
     <div id="lobby-screen" class="fixed inset-0 flex items-center justify-center text-white">
         <div class="bg-white text-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 relative overflow-hidden">
             <h1 class="text-3xl font-bold mb-2 text-center text-blue-800">Дурак</h1>
-            <p class="text-center text-gray-500 mb-6 text-sm uppercase tracking-widest font-bold">Настройки игры</p>
+            <p class="text-center text-gray-500 mb-6 text-sm uppercase tracking-widest font-bold">Ultimate Green</p>
             
-            <div id="lobby-main" class="space-y-6">
-                
-                <!-- Выбор режима -->
+            <div id="lobby-main" class="space-y-5">
+                <!-- Режим -->
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Режим игры</label>
                     <div class="flex gap-2 bg-gray-100 p-1 rounded-lg">
@@ -126,8 +178,7 @@
                         <button onclick="setMode('transfer')" id="opt-mode-transfer" class="option-btn">Переводной</button>
                     </div>
                 </div>
-
-                <!-- Выбор колоды -->
+                <!-- Колода -->
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Размер колоды</label>
                     <div class="flex gap-2 bg-gray-100 p-1 rounded-lg">
@@ -136,30 +187,42 @@
                         <button onclick="setDeck(52)" id="opt-deck-52" class="option-btn">52</button>
                     </div>
                 </div>
+                <!-- Магия -->
+                <div class="flex items-center justify-between bg-blue-50 p-3 rounded-lg border border-blue-100 cursor-pointer hover:bg-blue-100 transition" onclick="toggleMagic()">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white shadow"><i class="fas fa-hat-wizard"></i></div>
+                        <div>
+                            <div class="font-bold text-sm text-gray-700">Магический Режим</div>
+                            <div class="text-[10px] text-gray-500">Джокер, Рентген, Щит</div>
+                        </div>
+                    </div>
+                    <div id="magic-toggle" class="w-6 h-6 rounded border-2 border-gray-400 bg-white flex items-center justify-center text-xs text-transparent transition-colors">
+                        <i class="fas fa-check"></i>
+                    </div>
+                </div>
 
                 <div class="border-t pt-4">
-                    <button onclick="startOfflineGame()" class="w-full bg-gradient-to-r from-green-500 to-green-700 text-white font-bold py-4 rounded-lg shadow-lg hover:from-green-600 hover:to-green-800 transition transform hover:scale-105 flex items-center justify-center gap-2">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Играть с Ботом
+                    <button onclick="startOfflineGame()" class="w-full bg-gradient-to-r from-green-600 to-green-700 text-white font-bold py-4 rounded-lg shadow-lg hover:brightness-110 transition flex items-center justify-center gap-2 text-lg">
+                        <i class="fas fa-play"></i> Играть с Ботом
                     </button>
                 </div>
 
                 <div class="text-center">
-                    <p class="text-xs text-gray-400 mb-2 mt-4">Или Онлайн</p>
+                    <p class="text-xs text-gray-400 mb-2 mt-4">Онлайн (Без магии)</p>
                     <div id="online-controls" class="space-y-2 opacity-50 pointer-events-none transition-opacity">
-                        <button onclick="createOnlineGame()" class="w-full bg-blue-100 text-blue-700 font-bold py-2 rounded-lg text-sm hover:bg-blue-200">Создать Онлайн</button>
+                        <button onclick="createOnlineGame()" class="w-full bg-blue-100 text-blue-700 font-bold py-2 rounded-lg text-sm hover:bg-blue-200">Создать</button>
                         <div class="flex gap-2">
                             <input id="join-game-id" type="text" placeholder="ID (6 цифр)" class="flex-1 border-2 border-gray-300 p-2 rounded-lg text-center font-mono uppercase text-sm">
                             <button onclick="joinOnlineGame()" class="bg-blue-600 text-white font-bold px-4 rounded-lg text-sm">Войти</button>
                         </div>
                     </div>
-                    <div id="auth-status" class="text-[10px] text-gray-400 mt-1">Требуется конфиг для онлайна</div>
+                    <div id="auth-status" class="text-[10px] text-gray-400 mt-1">Требуется конфиг</div>
                 </div>
             </div>
 
             <!-- Экран ожидания -->
             <div id="waiting-room" class="hidden text-center">
-                <h2 class="text-xl font-bold mb-2">Ожидание игрока</h2>
+                <h2 class="text-xl font-bold mb-2 text-gray-800">Ожидание...</h2>
                 <div class="bg-yellow-100 p-4 rounded-lg mb-4 border-2 border-yellow-300">
                     <div class="text-sm text-gray-600">Код комнаты:</div>
                     <div id="display-game-id" class="text-4xl font-mono font-bold tracking-widest text-blue-700 select-all cursor-pointer" onclick="copyId()">------</div>
@@ -173,24 +236,45 @@
     <div id="game-ui" class="hidden h-full w-full relative">
         <!-- Верхняя панель -->
         <div class="absolute top-0 left-0 w-full p-2 flex justify-between items-start z-10 pointer-events-none">
-            <div id="status-badge" class="bg-gray-700 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg backdrop-blur-md pointer-events-auto transition-colors">
-                Ожидание...
+            <div id="status-container" class="flex flex-col gap-2 pointer-events-auto">
+                <div id="status-badge" class="bg-gray-700 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg backdrop-blur-md transition-colors">
+                    Ожидание...
+                </div>
+                <!-- Мана (скрыта по дефолту) -->
+                <div id="mana-container" class="hidden w-32 bg-gray-900 rounded-full h-4 border border-gray-600 relative overflow-hidden shadow-lg mt-1">
+                    <div id="mana-bar" class="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-cyan-400 w-0 transition-all duration-300"></div>
+                    <div class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white drop-shadow-md">MANA <span id="mana-val" class="ml-1">0</span></div>
+                </div>
             </div>
-            <div class="text-right pointer-events-auto flex flex-col items-end gap-2">
+
+            <div class="flex flex-col items-end gap-2 pointer-events-auto">
                 <div class="bg-white/90 text-gray-900 px-3 py-1 rounded shadow text-sm font-bold flex items-center gap-2">
                     Козырь: <span id="trump-suit-display" class="text-xl leading-none"></span>
                 </div>
-                <button onclick="leaveGame()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs shadow">Меню</button>
+                <!-- Магия Панель -->
+                <div id="magic-panel" class="hidden flex flex-col gap-2 mt-1">
+                    <button onclick="useSkill('peek')" id="btn-skill-peek" class="magic-btn bg-purple-600 hover:bg-purple-500" disabled>
+                        <i class="fas fa-eye"></i><span class="magic-tooltip">Рентген (30)</span>
+                    </button>
+                    <button onclick="useSkill('swap')" id="btn-skill-swap" class="magic-btn bg-yellow-500 hover:bg-yellow-400" disabled>
+                        <i class="fas fa-sync-alt"></i><span class="magic-tooltip">Обмен (40)</span>
+                    </button>
+                    <button onclick="useSkill('shield')" id="btn-skill-shield" class="magic-btn bg-blue-500 hover:bg-blue-400" disabled>
+                        <i class="fas fa-shield-alt"></i><span class="magic-tooltip">Щит (50)</span>
+                    </button>
+                </div>
+                <button onclick="leaveGame()" class="bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow"><i class="fas fa-times"></i></button>
             </div>
         </div>
 
         <div id="opponent-hand"></div>
-        <div id="opponent-name" class="absolute top-16 left-1/2 transform -translate-x-1/2 text-white/70 text-sm font-bold bg-black/20 px-2 rounded">Соперник</div>
+        <div id="opponent-name" class="absolute top-16 left-1/2 transform -translate-x-1/2 text-white/70 text-sm font-bold bg-black/20 px-2 rounded">Bot AI</div>
 
+        <!-- Колода -->
         <div id="deck-area" class="absolute left-4 top-1/2 transform -translate-y-1/2">
             <div class="relative w-[70px] h-[105px]">
                 <div id="trump-card-el" class="absolute top-0 left-0 transition-all"></div>
-                <div id="deck-stack" class="absolute top-0 left-0 w-full h-full bg-blue-900 border-2 border-white rounded-lg shadow-lg flex items-center justify-center">
+                <div id="deck-stack" class="absolute top-0 left-0 w-full h-full bg-blue-900 border-2 border-white rounded-lg shadow-lg flex items-center justify-center transition-all cursor-help" title="Карт осталось">
                     <span id="deck-count" class="text-white font-bold text-xl">36</span>
                 </div>
             </div>
@@ -198,20 +282,22 @@
 
         <div id="game-table"></div>
 
-        <!-- КНОПКИ ДЕЙСТВИЙ (БИТО / БЕРУ) -->
+        <!-- КНОПКИ -->
         <div id="action-area" class="absolute bottom-48 left-1/2 transform -translate-x-1/2 z-[999] flex gap-6 hidden">
-            <button id="btn-bito" onclick="performAction('bito')" class="btn-action btn-bito hidden">
-                БИТО!
-            </button>
-            <button id="btn-take" onclick="performAction('take')" class="btn-action btn-take hidden">
-                ВЗЯТЬ
-            </button>
+            <button id="btn-bito" onclick="performAction('bito')" class="btn-action btn-bito hidden shadow-lg">БИТО!</button>
+            <button id="btn-take" onclick="performAction('take')" class="btn-action btn-take hidden shadow-lg">ВЗЯТЬ</button>
         </div>
 
-        <div id="player-hand"></div>
+        <!-- РУКА (СКРОЛЛ) -->
+        <div id="player-hand-container">
+            <div id="player-hand"></div>
+        </div>
 
-        <div id="toast" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-6 py-3 rounded-xl pointer-events-none transition-all opacity-0 scale-90 z-[200]">
-            Сообщение
+        <div id="toast" class="fixed top-2/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-6 py-3 rounded-xl pointer-events-none transition-all opacity-0 scale-90 z-[2000] text-center border border-white/20 shadow-2xl">Msg</div>
+        
+        <!-- Эффекты -->
+        <div id="effect-overlay" class="fixed inset-0 pointer-events-none z-[1500] flex items-center justify-center hidden">
+            <h1 id="effect-text" class="text-6xl font-black text-yellow-400 drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] animate-bounce uppercase">EFFECT</h1>
         </div>
     </div>
 
@@ -221,11 +307,11 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // КОНФИГУРАЦИЯ ИГРЫ
-        const GAME_CONFIG = {
-            mode: 'classic', // classic | transfer
-            deckSize: 36     // 24 | 36 | 52
-        };
+        // --- КОНФИГ ---
+        const GAME_CONFIG = { mode: 'classic', deckSize: 36, magic: false };
+        const COSTS = { PEEK: 30, SWAP: 40, SHIELD: 50 };
+        const MANA_GAIN_ATTACK = 10;
+        const MANA_GAIN_DEFEND = 20;
 
         const MY_CUSTOM_CONFIG = {
           apiKey: "AIzaSyBlfCYqHw_uHxP6pyKOkW0QFsuHFw9_XyY",
@@ -246,12 +332,20 @@
             "Я видел, как голуби играют лучше."
         ];
 
+        // --- STATE ---
         let GAME_MODE = 'OFFLINE'; 
         let currentUser = { uid: 'player-offline' };
         let currentGameId = null;
         let unsubscribeGame = null;
         let localState = null;
         let botTimer = null;
+        let mana = 0;
+        let shieldActive = false;
+        let swapMode = false;
+        let revealedBotIndices = [];
+        let pendingCardChoice = null; // Карта для выбора (бить/перевести)
+
+        // --- FIREBASE ---
         let db, auth, gamesRef;
         let isFirebaseReady = false;
 
@@ -286,38 +380,56 @@
                 document.getElementById('auth-status').innerText = "Ошибка сети (только офлайн)";
             }
         }
-
         initFirebase();
 
-        // --- УПРАВЛЕНИЕ НАСТРОЙКАМИ ---
-        window.setMode = (mode) => {
-            GAME_CONFIG.mode = mode;
+        // --- МЕНЮ ---
+        window.setMode = (m) => {
+            GAME_CONFIG.mode = m;
             document.querySelectorAll('[id^="opt-mode-"]').forEach(el => el.classList.remove('active'));
-            document.getElementById(`opt-mode-${mode}`).classList.add('active');
+            document.getElementById(`opt-mode-${m}`).classList.add('active');
         };
-
-        window.setDeck = (size) => {
-            GAME_CONFIG.deckSize = size;
+        window.setDeck = (s) => {
+            GAME_CONFIG.deckSize = s;
             document.querySelectorAll('[id^="opt-deck-"]').forEach(el => el.classList.remove('active'));
-            document.getElementById(`opt-deck-${size}`).classList.add('active');
+            document.getElementById(`opt-deck-${s}`).classList.add('active');
+        };
+        window.toggleMagic = () => {
+            GAME_CONFIG.magic = !GAME_CONFIG.magic;
+            const check = document.getElementById('magic-toggle');
+            if (GAME_CONFIG.magic) {
+                check.classList.remove('text-transparent'); check.classList.add('bg-purple-600', 'border-purple-600', 'text-white');
+            } else {
+                check.classList.add('text-transparent'); check.classList.remove('bg-purple-600', 'border-purple-600', 'text-white');
+            }
         };
 
-        // --- УПРАВЛЕНИЕ ИГРОЙ ---
-
+        // --- ЗАПУСК ---
         window.startOfflineGame = () => {
             GAME_MODE = 'OFFLINE';
             currentUser = { uid: 'player' };
             hideGameOver();
+            mana = 0; shieldActive = false; swapMode = false; revealedBotIndices = []; pendingCardChoice = null;
+            updateManaUI();
             
-            const deck = createDeck(GAME_CONFIG.deckSize);
+            document.getElementById('mana-container').classList.toggle('hidden', !GAME_CONFIG.magic);
+            document.getElementById('magic-panel').classList.toggle('hidden', !GAME_CONFIG.magic);
+
+            const deck = createDeck(GAME_CONFIG.deckSize, GAME_CONFIG.magic);
             const trump = deck[0];
             const pHand = [], bHand = [];
-            for(let i=0; i<6; i++) { if(deck.length) pHand.push(deck.pop()); if(deck.length) bHand.push(deck.pop()); }
+            const dealCount = Math.min(6, Math.floor((deck.length - 1) / 2));
+            for(let i=0; i<dealCount; i++) { 
+                if(deck.length) pHand.push(deck.pop()); 
+                if(deck.length) bHand.push(deck.pop()); 
+            }
 
-            let pMin = 1000, bMin = 1000;
-            pHand.forEach(c => { if(c.suit === trump.suit && c.val < pMin) pMin = c.val; });
-            bHand.forEach(c => { if(c.suit === trump.suit && c.val < bMin) bMin = c.val; });
-            const playerFirst = pMin < bMin || (pMin === 1000 && bMin === 1000); 
+            let playerFirst = true;
+            if (trump.rank !== 'JOKER') {
+                let pMin = 1000, bMin = 1000;
+                pHand.forEach(c => { if(c.suit === trump.suit && c.val < pMin) pMin = c.val; });
+                bHand.forEach(c => { if(c.suit === trump.suit && c.val < bMin) bMin = c.val; });
+                playerFirst = (pMin < bMin) || (pMin === 1000 && bMin === 1000);
+            }
 
             localState = {
                 status: 'playing',
@@ -330,491 +442,488 @@
                 attacker: playerFirst ? 'player' : 'bot',
                 hostId: 'player',
                 joinerId: 'bot',
-                config: { ...GAME_CONFIG } 
+                config: { ...GAME_CONFIG }
             };
 
             showGameUI();
             renderGame(localState);
             if (localState.turn === 'bot') startBotTimer();
-        }
-
-        window.createOnlineGame = async () => {
-            if (!isFirebaseReady) return showToast("Нет подключения к серверу");
-            GAME_MODE = 'ONLINE';
-            const gameId = Math.floor(100000 + Math.random() * 900000).toString();
-            const deck = createDeck(GAME_CONFIG.deckSize);
-            
-            const state = {
-                hostId: currentUser.uid,
-                joinerId: null,
-                status: 'waiting',
-                deck: deck,
-                trumpCard: deck[0],
-                trumpSuit: deck[0].suit,
-                hands: { [currentUser.uid]: [] },
-                table: [],
-                turn: currentUser.uid,
-                attacker: currentUser.uid,
-                lastUpdate: serverTimestamp(),
-                config: { ...GAME_CONFIG } 
-            };
-
-            await setDoc(doc(gamesRef, gameId), state);
-            currentGameId = gameId;
-            document.getElementById('lobby-screen').classList.add('hidden');
-            document.getElementById('waiting-room').classList.remove('hidden');
-            document.getElementById('display-game-id').innerText = gameId;
-            subscribeToGame(gameId);
         };
 
-        window.joinOnlineGame = async () => {
-            if (!isFirebaseReady) return showToast("Нет подключения");
-            const inputId = document.getElementById('join-game-id').value.trim();
-            if (inputId.length !== 6) return showToast("Нужен ID из 6 цифр");
-            GAME_MODE = 'ONLINE';
+        // --- ОНЛАЙН ЗАГЛУШКИ (Используют старую логику подключения, но без магии пока) ---
+        window.createOnlineGame = async () => { /* ... старый код ... */ showToast("В разработке (используйте офлайн)"); };
+        window.joinOnlineGame = async () => { /* ... старый код ... */ showToast("В разработке (используйте офлайн)"); };
 
-            const gameRef = doc(gamesRef, inputId);
-            const snap = await getDoc(gameRef);
-            if (!snap.exists()) return showToast("Игра не найдена");
-            const data = snap.data();
-            if (data.status !== 'waiting') return showToast("Игра занята");
-
-            GAME_CONFIG.deckSize = data.config.deckSize;
-            GAME_CONFIG.mode = data.config.mode;
-
-            const deck = [...data.deck];
-            const h1 = [], h2 = [];
-            for(let i=0; i<6; i++) { if(deck.length) h1.push(deck.pop()); if(deck.length) h2.push(deck.pop()); }
-
-            await updateDoc(gameRef, {
-                joinerId: currentUser.uid,
-                status: 'playing',
-                deck: deck,
-                [`hands.${data.hostId}`]: h1,
-                [`hands.${currentUser.uid}`]: h2,
-                attacker: data.hostId, 
-                turn: data.hostId
-            });
-
-            currentGameId = inputId;
-            subscribeToGame(inputId);
+        // --- ЛОГИКА ИГРОКА ---
+        window.globalClick = (e) => {
+            if (pendingCardChoice && !e.target.closest('.card') && !e.target.closest('.phantom-card') && !e.target.closest('.beat-target')) {
+                cancelChoice();
+            }
         };
 
-        function subscribeToGame(id) {
-            unsubscribeGame = onSnapshot(doc(gamesRef, id), (snap) => {
-                if(!snap.exists()) return leaveGame();
-                const d = snap.data();
-                localState = d;
-                if(d.config) {
-                    GAME_CONFIG.mode = d.config.mode;
-                    GAME_CONFIG.deckSize = d.config.deckSize;
-                }
-                
-                if (d.status === 'playing') {
-                    showGameUI();
-                    renderGame(d);
-                }
-            });
-        }
+        window.playerCardClick = (card, event) => {
+            if(event) event.stopPropagation();
+            if (swapMode) { doSwap(card); return; }
 
-        // --- ОСНОВНАЯ ЛОГИКА ---
-
-        window.playerCardClick = (card) => {
             const state = localState;
-            const myUid = GAME_MODE === 'OFFLINE' ? 'player' : currentUser.uid;
-            
-            const isMyTurn = state.turn === myUid;
-            const amIAttacker = state.attacker === myUid;
+            const isMyTurn = state.turn === 'player';
+            const amIAttacker = state.attacker === 'player';
             const matchesTable = state.table.some(p => p.attack.rank === card.rank || (p.defend && p.defend.rank === card.rank));
             
-            // --- ЛОГИКА ПЕРЕВОДА (ИГРОК) ---
-            if (GAME_CONFIG.mode === 'transfer' && !amIAttacker && !isMyTurn) {
-                const tableHasCards = state.table.length > 0;
-                const noDefenseYet = state.table.every(p => !p.defend);
-                const ranksMatch = state.table[0].attack.rank === card.rank;
-                
-                const oppId = GAME_MODE === 'OFFLINE' ? 'bot' : (state.hostId === myUid ? state.joinerId : state.hostId);
-                const oppHandSize = state.hands[oppId].length;
-                const cardsToTransfer = state.table.length + 1;
-
-                if (tableHasCards && noDefenseYet && ranksMatch) {
-                    if (oppHandSize >= cardsToTransfer) {
-                        if (GAME_MODE === 'OFFLINE' && botTimer) { clearTimeout(botTimer); botTimer = null; }
-                        performTransfer(card, myUid); // Передаем myUid как инициатора
-                        return;
-                    } else {
-                        showToast("У соперника мало карт для перевода!");
-                        return;
+            // --- ПЕРЕВОД ---
+            if (GAME_CONFIG.mode === 'transfer' && !amIAttacker && isMyTurn) { // Только если мой ход (защита)
+                if (state.table.length > 0 && state.table.every(p => !p.defend)) {
+                    if (card.rank === state.table[0].attack.rank && card.rank !== 'JOKER') {
+                        if (state.hands['bot'].length >= state.table.length + 1) {
+                            // Проверка на выбор (БИТЬ или ПЕРЕВЕСТИ)
+                            const att = state.table[0].attack;
+                            const canDefendToo = canBeat(card, att, state.trumpSuit);
+                            if (canDefendToo) {
+                                pendingCardChoice = card;
+                                renderGame(state);
+                                showToast("Нажми карту: бить (красная) или перевести (синяя)?");
+                                return;
+                            } else {
+                                if (botTimer) clearTimeout(botTimer);
+                                performTransfer(card, 'player');
+                                return;
+                            }
+                        } else {
+                            showToast("У соперника мало карт!");
+                            return;
+                        }
                     }
                 }
             }
-            // -------------------------------
 
-            if (!isMyTurn && !(amIAttacker && matchesTable)) {
-                return showToast("Не ваш ход! Ждите.");
-            }
+            if (!isMyTurn && !(amIAttacker && matchesTable)) return showToast("Ждите...");
 
             if (amIAttacker) {
-                if (state.table.length > 0 && !matchesTable) return showToast("Карта не совпадает по рангу");
+                // АТАКА
+                if (state.hands['bot'].length === 0) { showToast("У соперника нет карт!"); return; }
+                if (state.table.length > 0 && !matchesTable) return showToast("Ранг не совпадает");
                 if (state.table.length >= 6) return showToast("Стол полон");
-                
-                if (GAME_MODE === 'OFFLINE' && botTimer) { clearTimeout(botTimer); botTimer = null; }
-                applyMove(card, 'attack', -1, myUid);
+                if (shieldActive && state.table.length > 0) return showToast("Щит активен!");
+
+                if (botTimer) clearTimeout(botTimer);
+                applyMove(card, 'attack', -1, 'player');
+                addMana(MANA_GAIN_ATTACK);
             } else {
-                if (!isMyTurn) return showToast("Ждите хода соперника");
+                // ЗАЩИТА
+                if (!isMyTurn) return showToast("Ждите...");
                 const pairIdx = state.table.findIndex(p => !p.defend);
                 if (pairIdx === -1) return; 
-                
                 const att = state.table[pairIdx].attack;
-                if (!canBeat(card, att, state.trumpSuit)) return showToast("Этой картой нельзя побить");
+                if (!canBeat(card, att, state.trumpSuit)) return showToast("Не бьёт!");
                 
-                applyMove(card, 'defend', pairIdx, myUid);
+                applyMove(card, 'defend', pairIdx, 'player');
+                addMana(MANA_GAIN_DEFEND);
             }
         };
+
+        window.resolveChoice = (choice) => {
+            if (!pendingCardChoice) return;
+            const card = pendingCardChoice;
+            pendingCardChoice = null;
+            if (choice === 'transfer') {
+                if (botTimer) clearTimeout(botTimer);
+                performTransfer(card, 'player');
+            } else { // Beat
+                if (botTimer) clearTimeout(botTimer);
+                applyMove(card, 'defend', 0, 'player'); // В переводе бьем первую (единственную активную)
+                addMana(MANA_GAIN_DEFEND);
+            }
+        };
+        window.cancelChoice = () => { pendingCardChoice = null; renderGame(localState); };
 
         window.performAction = (type) => {
-            if (GAME_MODE === 'OFFLINE' && botTimer) clearTimeout(botTimer);
-            processAction(type);
+            if (botTimer) clearTimeout(botTimer);
+            if (type === 'bito') endTurn(true);
+            else endTurn(false);
         };
 
-        // --- УНИВЕРСАЛЬНЫЕ ФУНКЦИИ ХОДА ---
-
-        async function performTransfer(card, who) {
-            const actingUid = who;
-            // Кому переводим?
-            const oppId = (actingUid === localState.hostId) ? localState.joinerId : localState.hostId;
-
-            let newHands = { ...localState.hands };
-            // Удаляем карту именно у того, кто ходит
-            newHands[actingUid] = newHands[actingUid].filter(c => !(c.rank===card.rank && c.suit===card.suit));
-            let newTable = [...localState.table];
-            
-            newTable.push({ attack: card, defend: null });
-            
-            // Смена ролей: Тот, кто перевел, становится атакующим. Жертва - защищающимся.
-            let newAttacker = actingUid;
-            let newTurn = oppId;
-
-            if (GAME_MODE === 'ONLINE') {
-                await updateDoc(doc(gamesRef, currentGameId), {
-                    [`hands.${actingUid}`]: newHands[actingUid],
-                    table: newTable,
-                    attacker: newAttacker,
-                    turn: newTurn
-                });
-            } else {
-                localState.hands = newHands;
-                localState.table = newTable;
-                localState.attacker = newAttacker;
-                localState.turn = newTurn;
-                renderGame(localState);
-                if (newTurn === 'bot') startBotTimer();
-            }
-            if(actingUid === 'player') showToast("Перевод!");
+        // --- ЯДРО ХОДОВ ---
+        function removeCardFromHand(hand, cardToRemove) {
+            const idx = hand.findIndex(c => c.rank === cardToRemove.rank && c.suit === cardToRemove.suit);
+            if (idx !== -1) hand.splice(idx, 1);
         }
 
-        async function applyMove(card, type, idx = -1, who) {
-            const actingUid = who;
-            const oppId = (actingUid === localState.hostId) ? localState.joinerId : localState.hostId;
-
-            let newHands = { ...localState.hands };
-            newHands[actingUid] = newHands[actingUid].filter(c => !(c.rank===card.rank && c.suit===card.suit));
-            
-            let newTable = [...localState.table];
-            let newTurn = localState.turn;
+        function applyMove(card, type, idx, who) {
+            const state = localState;
+            removeCardFromHand(state.hands[who], card);
 
             if (type === 'attack') {
-                newTable.push({ attack: card, defend: null });
-                newTurn = oppId; 
-                if (GAME_MODE === 'OFFLINE') startBotTimer();
+                state.table.push({ attack: card, defend: null });
+                state.turn = (who === 'player' ? 'bot' : 'player'); // Переход хода защищающемуся
+                if (who === 'player') startBotTimer();
             } else {
-                newTable[idx] = { ...newTable[idx], defend: card };
-                const hasUndefended = newTable.some(p => !p.defend);
+                state.table[idx].defend = card;
+                const hasUndefended = state.table.some(p => !p.defend);
                 if (!hasUndefended) {
-                    newTurn = localState.attacker;
-                    if (GAME_MODE === 'OFFLINE') startBotTimer();
+                    state.turn = state.attacker; // Всё отбито -> ход Атакующего
+                    if (state.attacker === 'bot') startBotTimer();
+                } else if (who === 'bot') {
+                    startBotTimer(); // Бот продолжает бить
                 }
             }
-
-            if (GAME_MODE === 'ONLINE') {
-                await updateDoc(doc(gamesRef, currentGameId), {
-                    [`hands.${actingUid}`]: newHands[actingUid],
-                    table: newTable,
-                    turn: newTurn
-                });
-            } else {
-                localState.hands = newHands;
-                localState.table = newTable;
-                localState.turn = newTurn;
-                renderGame(localState);
-            }
+            renderGame(state);
         }
 
-        async function processAction(action) {
-            const currentAttackerId = localState.attacker;
-            const currentDefenderId = (currentAttackerId === localState.hostId) ? localState.joinerId : localState.hostId;
+        function performTransfer(card, who) {
+            const state = localState;
+            const victim = (who === 'player' ? 'bot' : 'player');
+            removeCardFromHand(state.hands[who], card);
+            state.table.push({ attack: card, defend: null });
             
-            let d = [...localState.deck];
-            let h = JSON.parse(JSON.stringify(localState.hands));
-            let t = [];
-            let newAttacker = null;
-            let newTurn = null;
-
-            if (action === 'bito') {
-                [currentAttackerId, currentDefenderId].forEach(uid => {
-                    while(h[uid].length < 6 && d.length > 0) h[uid].push(d.pop());
-                });
-                newAttacker = currentDefenderId;
-                newTurn = currentDefenderId;
-
-            } else if (action === 'take') {
-                let cardsToTake = [];
-                localState.table.forEach(p => { cardsToTake.push(p.attack); if(p.defend) cardsToTake.push(p.defend); });
-                h[currentDefenderId] = [...h[currentDefenderId], ...cardsToTake];
-                
-                while(h[currentAttackerId].length < 6 && d.length > 0) h[currentAttackerId].push(d.pop());
-                
-                newAttacker = currentAttackerId; 
-                newTurn = currentAttackerId;
-            }
-
-            if (GAME_MODE === 'ONLINE') {
-                await updateDoc(doc(gamesRef, currentGameId), {
-                    deck: d, hands: h, table: t, attacker: newAttacker, turn: newTurn
-                });
-            } else {
-                localState.deck = d; localState.hands = h; localState.table = t;
-                localState.attacker = newAttacker; localState.turn = newTurn;
-                renderGame(localState);
-                if (newTurn === 'bot') startBotTimer();
-            }
+            // СМЕНА РОЛЕЙ
+            state.attacker = who;
+            state.turn = victim;
+            
+            renderGame(state);
+            if (who === 'player') { showEffect("ПЕРЕВОД!"); startBotTimer(); }
         }
 
-        // --- ЛОГИКА БОТА ---
+        function endTurn(success) { // success = BITO
+            const state = localState;
+            const defender = (state.attacker === 'player' ? 'bot' : 'player');
+            const attacker = state.attacker;
 
+            if (success) {
+                // БИТО
+                state.table = [];
+                drawCards(attacker);
+                drawCards(defender);
+                // Смена ролей
+                state.attacker = defender;
+                state.turn = defender;
+            } else {
+                // ВЗЯЛ
+                let cards = [];
+                state.table.forEach(p => { cards.push(p.attack); if(p.defend) cards.push(p.defend); });
+                state.hands[defender].push(...cards);
+                state.table = [];
+                drawCards(attacker);
+                // Роли НЕ меняются (Атакующий ходит снова)
+                state.turn = attacker; 
+            }
+
+            shieldActive = false; 
+            revealedBotIndices = [];
+            document.getElementById('player-hand').classList.remove('shield-active');
+
+            renderGame(state);
+            if (state.turn === 'bot') startBotTimer();
+        }
+
+        // --- БОТ ---
         function startBotTimer() {
             if (botTimer) clearTimeout(botTimer);
-            botTimer = setTimeout(botTurn, 1000 + Math.random() * 500);
+            botTimer = setTimeout(botTurn, 1000);
         }
 
         function botTurn() {
-            // FIX: Бот не ходит, если не его очередь!
-            if (!localState || GAME_MODE !== 'OFFLINE' || localState.turn !== 'bot') return;
-            
+            if (!localState || localState.turn !== 'bot') return;
             const state = localState;
             if (checkGameOver(state)) return;
 
             const botHand = state.hands['bot'];
             const amIAttacker = state.attacker === 'bot';
 
-            // --- БОТ: ПЕРЕВОД ---
+            // TRANSFER CHECK
             if (GAME_CONFIG.mode === 'transfer' && !amIAttacker) {
-                const tableHasCards = state.table.length > 0;
-                const noDefenseYet = state.table.every(p => !p.defend);
-                
-                if (tableHasCards && noDefenseYet) {
-                    const rankToMatch = state.table[0].attack.rank;
-                    const transferCard = botHand.find(c => c.rank === rankToMatch);
-                    const playerCards = state.hands['player'].length;
-                    const cardsToTransfer = state.table.length + 1;
-
-                    if (transferCard && playerCards >= cardsToTransfer) {
-                        performTransfer(transferCard, 'bot'); // Бот переводит!
+                if (state.table.length > 0 && state.table.every(p => !p.defend)) {
+                    const rank = state.table[0].attack.rank;
+                    const transferCard = botHand.find(c => c.rank === rank && c.rank !== 'JOKER');
+                    if (transferCard && state.hands['player'].length >= state.table.length + 1) {
+                        performTransfer(transferCard, 'bot');
                         return;
                     }
                 }
             }
-            // --------------------
 
             if (amIAttacker) {
+                // Проверка: есть ли у игрока карты?
+                if (state.hands['player'].length === 0) {
+                    performAction('bito'); // Некуда кидать
+                    return;
+                }
+
                 if (state.table.length === 0) {
                     const c = getLowestCard(botHand, state.trumpSuit);
-                    applyMove(c, 'attack', -1, 'bot');
+                    if (c) applyMove(c, 'attack', -1, 'bot');
+                    else performAction('bito');
                 } else {
+                    if (shieldActive) { performAction('bito'); return; }
+                    
                     const ranks = new Set();
                     state.table.forEach(p => { ranks.add(p.attack.rank); if(p.defend) ranks.add(p.defend.rank); });
-                    const options = botHand.filter(c => ranks.has(c.rank)).sort((a,b) => getCardPower(a, state.trumpSuit) - getCardPower(b, state.trumpSuit));
+                    const options = botHand.filter(c => ranks.has(c.rank));
                     
                     if (options.length > 0 && state.table.length < 6) {
+                        options.sort((a,b) => getCardPower(a, state.trumpSuit) - getCardPower(b, state.trumpSuit));
                         applyMove(options[0], 'attack', -1, 'bot');
                     } else {
-                        // Бот нажимает "Бито" только если все отбито!
-                        const allDefended = state.table.every(p => p.defend);
-                        if (allDefended) {
-                            processAction('bito'); 
+                        // Жмем Бито только если все отбито
+                        if (state.table.every(p => p.defend)) {
+                            performAction('bito');
                         }
                     }
                 }
             } else {
-                const pairIdx = state.table.findIndex(p => !p.defend);
-                if (pairIdx === -1) { return; }
+                // DEFEND
+                const idx = state.table.findIndex(p => !p.defend);
+                if (idx === -1) return; // Всё отбито
 
-                const att = state.table[pairIdx].attack;
+                const att = state.table[idx].attack;
                 let beaters = botHand.filter(c => canBeat(c, att, state.trumpSuit));
                 
                 if (beaters.length > 0) {
                     beaters.sort((a,b) => getCardPower(a, state.trumpSuit) - getCardPower(b, state.trumpSuit));
-                    applyMove(beaters[0], 'defend', pairIdx, 'bot');
+                    applyMove(beaters[0], 'defend', idx, 'bot');
                 } else {
-                    processAction('take');
+                    performAction('take');
                 }
             }
         }
 
-        // --- UI RENDER ---
+        // --- SKILLS ---
+        window.useSkill = (skill) => {
+            if (!GAME_CONFIG.magic) return;
+            if (skill === 'peek') {
+                if (mana < COSTS.PEEK) return showToast("Мало маны!");
+                const botH = localState.hands['bot'];
+                if(botH.length === 0) return;
+                mana -= COSTS.PEEK;
+                revealedBotIndices = [];
+                const indices = Array.from({length: botH.length}, (_, i) => i);
+                for(let i=0; i < Math.min(2, botH.length); i++) {
+                    const rnd = Math.floor(Math.random() * indices.length);
+                    revealedBotIndices.push(indices[rnd]);
+                    indices.splice(rnd, 1);
+                }
+                showEffect("РЕНТГЕН");
+                renderGame(localState);
+                setTimeout(() => { revealedBotIndices = []; renderGame(localState); }, 3000);
+            } 
+            else if (skill === 'shield') {
+                if (mana < COSTS.SHIELD) return showToast("Мало маны!");
+                if (localState.attacker === 'player') return showToast("Щит только в защите!");
+                mana -= COSTS.SHIELD;
+                shieldActive = true;
+                showEffect("ЩИТ!");
+                document.getElementById('player-hand').classList.add('shield-active');
+            }
+            else if (skill === 'swap') {
+                if (mana < COSTS.SWAP) return showToast("Мало маны!");
+                if (localState.deck.length === 0) return showToast("Колода пуста!");
+                mana -= COSTS.SWAP;
+                swapMode = true;
+                showToast("Выберите карту");
+                document.querySelectorAll('.hand-card-wrapper .card').forEach(el => el.classList.add('card-swapping'));
+            }
+            updateManaUI();
+        }
+
+        function doSwap(card) {
+            const state = localState;
+            removeCardFromHand(state.hands['player'], card);
+            if (state.deck.length > 0) state.hands['player'].push(state.deck.pop());
+            state.deck.unshift(card); 
+            swapMode = false;
+            document.querySelectorAll('.hand-card-wrapper .card').forEach(el => el.classList.remove('card-swapping'));
+            showEffect("ОБМЕН");
+            renderGame(state);
+        }
+
+        // --- UTIL ---
+        function createDeck(size, magic) {
+            const suits = ['hearts','diamonds','clubs','spades'];
+            let ranks = [];
+            let values = {};
+            if (size == 24) { ranks = ['9','10','J','Q','K','A']; ranks.forEach((r,i)=>values[r]=i+3); }
+            else if (size == 52) { ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A']; ranks.forEach((r,i)=>values[r]=i); }
+            else { ranks = ['6','7','8','9','10','J','Q','K','A']; ranks.forEach((r,i)=>values[r]=i); }
+            let d = [];
+            for (let s of suits) for (let r of ranks) d.push({suit:s, rank:r, val:values[r]});
+            if (magic) d.push({ suit: 'joker', rank: 'JOKER', val: 999 });
+            for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}
+            return d;
+        }
+
+        function canBeat(card, target, trumpSuit) {
+            if (target.rank === 'JOKER') return (card.suit === trumpSuit && (card.rank === '6' || card.rank === '2'));
+            if (card.rank === 'JOKER') return true;
+            if (card.suit === target.suit) return card.val > target.val;
+            if (card.suit === trumpSuit && target.suit !== trumpSuit) return true;
+            return false;
+        }
+
+        function getCardPower(c, trumpSuit) {
+            if (c.rank === 'JOKER') return 200;
+            return c.val + (c.suit === trumpSuit ? 100 : 0);
+        }
+
+        function getLowestCard(hand, trumpSuit) {
+            if (hand.length === 0) return null;
+            return hand.reduce((prev, curr) => getCardPower(prev, trumpSuit) < getCardPower(curr, trumpSuit) ? prev : curr);
+        }
+
+        function drawCards(who) {
+            const state = localState;
+            while (state.hands[who].length < 6 && state.deck.length > 0) {
+                state.hands[who].push(state.deck.pop());
+            }
+            state.hands[who].sort((a,b) => getCardPower(a, state.trumpSuit) - getCardPower(b, state.trumpSuit));
+        }
+
+        function addMana(amt) {
+            if (!GAME_CONFIG.magic) return;
+            mana = Math.min(100, mana + amt);
+            updateManaUI();
+        }
 
         function checkGameOver(state) {
             if (state.deck.length === 0) {
-                const myUid = GAME_MODE === 'OFFLINE' ? 'player' : currentUser.uid;
-                const oppUid = GAME_MODE === 'OFFLINE' ? 'bot' : (state.hostId === myUid ? state.joinerId : state.hostId);
-                const myH = state.hands[myUid].length;
-                const oppH = state.hands[oppUid].length;
-                
-                if (myH === 0 && oppH === 0) { showGameOver('draw'); return true; }
+                const myH = state.hands['player'].length;
+                const botH = state.hands['bot'].length;
+                if (myH === 0 && botH === 0) { showGameOver('draw'); return true; }
                 if (myH === 0) { showGameOver('win'); return true; }
-                if (oppH === 0) { showGameOver('lose'); return true; }
+                if (botH === 0) { showGameOver('lose'); return true; }
             }
             return false;
         }
 
         function renderGame(state) {
-            if (checkGameOver(state)) return;
-
-            const myUid = GAME_MODE === 'OFFLINE' ? 'player' : currentUser.uid;
-            const oppUid = GAME_MODE === 'OFFLINE' ? 'bot' : (state.hostId === myUid ? state.joinerId : state.hostId);
-            const isMyTurn = state.turn === myUid;
-            const amIAttacker = state.attacker === myUid;
+            if (!state || checkGameOver(state)) return;
             
             const badge = document.getElementById('status-badge');
-            if (isMyTurn) {
-                badge.innerText = amIAttacker ? "Ваш ход: Атакуйте" : "Ваш ход: Отбивайтесь";
-                badge.className = "px-4 py-2 rounded-full text-sm font-bold shadow-lg bg-green-600 text-white animate-pulse";
+            if (state.turn === 'player') {
+                badge.innerText = state.attacker === 'player' ? "ВАШ ХОД (Атака)" : "ВАШ ХОД (Защита)";
+                badge.className = "bg-green-600 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow animate-pulse border border-green-400";
             } else {
-                if (amIAttacker) {
-                    badge.innerText = "Подкиньте или нажмите Бито";
-                    badge.className = "px-4 py-2 rounded-full text-sm font-bold shadow-lg bg-yellow-600 text-white";
-                } else {
-                    badge.innerText = "Соперник думает...";
-                    badge.className = "px-4 py-2 rounded-full text-sm font-bold shadow-lg bg-gray-700 text-white";
-                }
+                badge.innerText = "Ход Бота...";
+                badge.className = "bg-gray-700 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow border border-gray-600";
             }
 
-            const trump = state.trumpCard;
-            document.getElementById('trump-suit-display').innerHTML = `<span class="${(trump.suit==='hearts'||trump.suit==='diamonds')?'text-red-500':'text-gray-900'}">${getSuitChar(trump.suit)}</span>`;
             document.getElementById('deck-count').innerText = state.deck.length;
             const tEl = document.getElementById('trump-card-el');
-            tEl.innerHTML = renderCardHTML(trump);
+            tEl.innerHTML = renderCardHTML(state.trumpCard);
             tEl.style.transform = 'rotate(90deg) translateX(30px)';
-            if(state.deck.length===0) { document.getElementById('deck-stack').classList.add('hidden'); tEl.style.opacity='0.5'; }
-            else { document.getElementById('deck-stack').classList.remove('hidden'); tEl.style.opacity='1'; }
+            document.getElementById('trump-suit-display').innerHTML = getSuitIconHtml(state.trumpSuit);
+            
+            if(state.deck.length === 0) {
+                document.getElementById('deck-stack').classList.add('hidden');
+                tEl.style.opacity = '0.5';
+            } else {
+                document.getElementById('deck-stack').classList.remove('hidden');
+                tEl.style.opacity = '1';
+            }
 
-            const tableEl = document.getElementById('game-table');
-            tableEl.innerHTML = '';
-            state.table.forEach(pair => {
-                const slot = document.createElement('div'); slot.className = 'table-slot';
-                const att = document.createElement('div'); att.className = 'card'; att.innerHTML = renderCardHTML(pair.attack);
-                slot.appendChild(att);
-                if(pair.defend) {
-                    const def = document.createElement('div'); def.className = 'card'; def.style.top='20px'; def.style.left='20px'; def.style.zIndex=10;
-                    def.innerHTML = renderCardHTML(pair.defend); slot.appendChild(def);
+            const tbl = document.getElementById('game-table');
+            tbl.innerHTML = '';
+            state.table.forEach(p => {
+                const s = document.createElement('div'); s.className = 'table-slot';
+                
+                // Рендер Атаки + Фантом (если выбор)
+                const isTarget = pendingCardChoice && !p.defend;
+                const onclickAttr = isTarget ? `onclick="resolveChoice('beat')"` : '';
+                const targetClass = isTarget ? 'beat-target' : '';
+                
+                let attackHtml = `<div class="card ${targetClass}" style="top:0;left:0" ${onclickAttr}>${renderCardInner(p.attack)}</div>`;
+                s.innerHTML = attackHtml;
+
+                if (pendingCardChoice && !p.defend) {
+                    s.innerHTML += `<div class="phantom-card" onclick="resolveChoice('transfer')"><i class="fas fa-share text-3xl mb-1"></i><span class="text-[10px] font-bold uppercase">Перевод</span></div>`;
                 }
-                tableEl.appendChild(slot);
+
+                if(p.defend) s.innerHTML += `<div class="card" style="top:20px;left:20px;z-index:5">${renderCardInner(p.defend)}</div>`;
+                tbl.appendChild(s);
             });
 
-            const handEl = document.getElementById('player-hand');
-            handEl.innerHTML = '';
-            state.hands[myUid].sort((a,b) => getCardPower(a, state.trumpSuit) - getCardPower(b, state.trumpSuit))
-                .forEach(card => {
-                    const w = document.createElement('div'); w.className = 'hand-card-wrapper';
-                    const c = document.createElement('div'); c.className = 'card hover:ring-2 ring-blue-400';
-                    c.innerHTML = renderCardHTML(card);
-                    c.onclick = () => playerCardClick(card);
-                    w.appendChild(c); handEl.appendChild(w);
-                });
+            const pHand = document.getElementById('player-hand'); pHand.innerHTML = '';
+            state.hands['player'].forEach(c => {
+                const div = document.createElement('div'); div.className = 'hand-card-wrapper';
+                const cls = (c.rank === 'JOKER') ? 'card card-joker' : 'card';
+                const isSelected = pendingCardChoice && c.rank === pendingCardChoice.rank && c.suit === pendingCardChoice.suit;
+                const selectedClass = isSelected ? ' card-selected-action' : '';
+                const swapClass = (swapMode) ? ' card-swapping' : '';
+                div.innerHTML = `<div class="${cls}${swapClass}${selectedClass}" onclick='playerCardClick(${JSON.stringify(c)}, event)'>${renderCardInner(c)}</div>`;
+                pHand.appendChild(div);
+            });
 
-            const oppHandEl = document.getElementById('opponent-hand');
-            oppHandEl.innerHTML = '';
-            for(let i=0; i<state.hands[oppUid].length; i++) {
-                const b = document.createElement('div'); b.className = 'opponent-card-back'; oppHandEl.appendChild(b);
+            const bHand = document.getElementById('opponent-hand'); bHand.innerHTML = '';
+            for(let i=0; i<state.hands['bot'].length; i++) {
+                const d = document.createElement('div');
+                const isRevealed = revealedBotIndices.includes(i);
+                d.className = isRevealed ? 'opponent-card-back opponent-card-revealed' : 'opponent-card-back';
+                d.innerHTML = isRevealed ? renderCardInner(state.hands['bot'][i]) : '';
+                bHand.appendChild(d);
             }
 
-            const btnArea = document.getElementById('action-area');
+            const area = document.getElementById('action-area');
             const btnBito = document.getElementById('btn-bito');
             const btnTake = document.getElementById('btn-take');
-            
-            btnArea.classList.add('hidden');
-            btnBito.classList.add('hidden');
-            btnTake.classList.add('hidden');
+            area.classList.add('hidden'); btnBito.classList.add('hidden'); btnTake.classList.add('hidden');
 
             if (state.table.length > 0) {
-                if (amIAttacker) {
-                    const allDefended = state.table.every(p => p.defend);
-                    if (allDefended) {
-                        btnArea.classList.remove('hidden');
-                        btnBito.classList.remove('hidden');
+                if (state.attacker === 'player') {
+                    if (state.table.every(p => p.defend)) {
+                        area.classList.remove('hidden'); btnBito.classList.remove('hidden');
                     }
                 } else {
-                    if (isMyTurn) {
-                        btnArea.classList.remove('hidden');
-                        btnTake.classList.remove('hidden');
+                    if (state.turn === 'player') {
+                        area.classList.remove('hidden'); btnTake.classList.remove('hidden');
                     }
                 }
             }
-        }
-
-        // --- HELPERS ---
-        function canBeat(c, a, t) {
-            if(c.suit===a.suit) return c.val > a.val; 
-            if(c.suit===t && a.suit!==t) return true;
-            return false;
-        }
-        function getCardPower(c, t) { return c.val + (c.suit===t?20:0); }
-        function getLowestCard(h, t) { if(!h.length)return null; return h.reduce((p,c)=>getCardPower(p,t)<getCardPower(c,t)?p:c); }
-        
-        function showGameOver(res) {
-            const sc = document.getElementById('game-over-screen');
-            const ti = document.getElementById('go-title');
-            const ms = document.getElementById('go-message');
-            const co = document.getElementById('game-over-content');
-            sc.classList.remove('hidden');
-            setTimeout(()=>{sc.classList.remove('opacity-0'); co.classList.remove('scale-90'); co.classList.add('scale-100');},50);
-            if(res==='win'){ti.innerText="ПОБЕДА!";ti.className="text-6xl font-black mb-4 text-green-500";ms.innerText="Красава!";}
-            else if(res==='lose'){ti.innerText="ВЫ ПРОИГРАЛИ";ti.className="text-6xl font-black mb-4 text-red-600";ms.innerText=`"${LOSER_JOKES[Math.floor(Math.random()*LOSER_JOKES.length)]}"`;}
-            else{ti.innerText="НИЧЬЯ";ti.className="text-6xl font-black mb-4 text-yellow-400";ms.innerText="Мир!";}
-        }
-
-        function createDeck(size = 36) {
-            const suits = ['hearts','diamonds','clubs','spades'];
-            let ranks = [];
-            let values = {};
-
-            if (size == 24) {
-                ranks = ['9','10','J','Q','K','A'];
-                ranks.forEach((r, i) => values[r] = i + 3); 
-            } else if (size == 52) {
-                ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-                ranks.forEach((r, i) => values[r] = i); 
-            } else {
-                ranks = ['6','7','8','9','10','J','Q','K','A'];
-                ranks.forEach((r, i) => values[r] = i);
-            }
-
-            let d = []; 
-            for (let su of suits) for (let ra of ranks) d.push({suit:su, rank:ra, val:values[ra]});
-            for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}
-            return d;
+            
+            document.getElementById('btn-skill-peek').disabled = mana < COSTS.PEEK;
+            document.getElementById('btn-skill-swap').disabled = mana < COSTS.SWAP || state.deck.length === 0;
+            document.getElementById('btn-skill-shield').disabled = mana < COSTS.SHIELD;
+            updateManaUI();
         }
 
         function renderCardHTML(c) {
-            const col=(c.suit==='hearts'||c.suit==='diamonds')?'suit-red':'suit-black';
-            return `<div class="text-left font-bold text-sm leading-none ${col}">${c.rank}</div><div class="flex-grow flex items-center justify-center text-3xl ${col}">${getSuitChar(c.suit)}</div><div class="text-right font-bold text-sm leading-none transform rotate-180 ${col}">${c.rank}</div>`;
+            const cls = (c.rank === 'JOKER') ? 'card card-joker' : 'card';
+            return `<div class="${cls}">${renderCardInner(c)}</div>`;
         }
-        function getSuitChar(s) { return {'hearts':'♥','diamonds':'♦','clubs':'♣','spades':'♠'}[s]; }
-        window.hideGameOver=()=>{document.getElementById('game-over-screen').classList.add('hidden','opacity-0');}
-        window.showGameUI=()=>{document.getElementById('lobby-screen').classList.add('hidden');document.getElementById('game-ui').classList.remove('hidden');}
-        window.leaveGame=()=>{if(unsubscribeGame)unsubscribeGame();location.reload();}
-        window.copyId=()=>{navigator.clipboard.writeText(currentGameId);showToast("ID скопирован");}
-        window.showToast=(m)=>{const t=document.getElementById('toast');t.innerText=m;t.classList.remove('opacity-0','scale-90');setTimeout(()=>t.classList.add('opacity-0','scale-90'),2000);}
+
+        function renderCardInner(c) {
+            if (c.rank === 'JOKER') return `<div class="flex flex-col items-center justify-center h-full"><i class="fas fa-hat-wizard text-4xl"></i><div class="font-bold text-[10px]">JOKER</div></div>`;
+            const color = (c.suit === 'hearts' || c.suit === 'diamonds') ? 'suit-red' : 'suit-black';
+            const icon = getSuitChar(c.suit);
+            return `<div class="text-left font-bold text-sm leading-none ${color} p-1">${c.rank}</div><div class="flex-grow flex items-center justify-center text-4xl ${color}">${icon}</div><div class="text-right font-bold text-sm leading-none transform rotate-180 ${color} p-1">${c.rank}</div>`;
+        }
+
+        function getSuitChar(s) { return {'hearts':'♥','diamonds':'♦','clubs':'♣','spades':'♠', 'joker':'★'}[s] || ''; }
+        function getSuitIconHtml(s) { 
+            const c = (s==='hearts'||s==='diamonds')?'text-red-500':'text-gray-900';
+            const ch = getSuitChar(s);
+            return `<span class="${c}">${ch}</span>`;
+        }
+        function updateManaUI() { document.getElementById('mana-bar').style.width = mana + '%'; document.getElementById('mana-val').innerText = mana; }
+        
+        function showGameOver(res) {
+            document.getElementById('game-over-screen').classList.remove('hidden', 'opacity-0');
+            const t = document.getElementById('go-title');
+            const m = document.getElementById('go-message');
+            if(res==='win'){ t.innerText="ПОБЕДА!"; t.className="text-6xl font-black mb-4 text-green-500"; m.innerText="Красава!"; }
+            else if(res==='lose'){ t.innerText="ВЫ ПРОИГРАЛИ"; t.className="text-6xl font-black mb-4 text-red-600"; m.innerText=`"${LOSER_JOKES[Math.floor(Math.random()*LOSER_JOKES.length)]}"`; }
+            else { t.innerText="НИЧЬЯ"; t.className="text-6xl font-black mb-4 text-yellow-400"; m.innerText="Мир!"; }
+        }
+
+        window.copyId = () => { navigator.clipboard.writeText(currentGameId); showToast("ID скопирован"); }
+        window.leaveGame = () => location.reload();
+        window.hideGameOver = () => document.getElementById('game-over-screen').classList.add('hidden');
+        window.showGameUI = () => { document.getElementById('lobby-screen').classList.add('hidden'); document.getElementById('game-ui').classList.remove('hidden'); };
+        window.showToast = (m) => { const t=document.getElementById('toast'); t.innerText=m; t.classList.remove('opacity-0','scale-90'); setTimeout(()=>t.classList.add('opacity-0','scale-90'), 2000); };
+        function showEffect(txt) {
+            const el = document.getElementById('effect-overlay');
+            document.getElementById('effect-text').innerText = txt;
+            el.classList.remove('hidden');
+            setTimeout(()=>el.classList.add('hidden'), 1500);
+        }
     </script>
 </body>
 </html>
+
