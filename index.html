@@ -150,6 +150,12 @@
         
         /* Эффект магии */
         #effect-overlay { z-index: 1500; }
+
+        /* Скролл для списка комнат */
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #888; border-radius: 2px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #555; }
     </style>
 </head>
 <body class="h-screen w-screen text-gray-800 select-none" onclick="globalClick(event)">
@@ -165,11 +171,11 @@
 
     <!-- ЛОББИ -->
     <div id="lobby-screen" class="fixed inset-0 flex items-center justify-center text-white">
-        <div class="bg-white text-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 relative overflow-hidden">
+        <div class="bg-white text-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 relative overflow-hidden flex flex-col max-h-[90vh]">
             <h1 class="text-3xl font-bold mb-2 text-center text-blue-800">Дурак</h1>
-            <p class="text-center text-gray-500 mb-6 text-sm uppercase tracking-widest font-bold">Ultimate Green</p>
+            <p class="text-center text-gray-500 mb-4 text-sm uppercase tracking-widest font-bold">Ultimate Green</p>
             
-            <div id="lobby-main" class="space-y-5">
+            <div id="lobby-main" class="space-y-4 overflow-y-auto custom-scroll pr-1">
                 <!-- Режим -->
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Режим игры</label>
@@ -208,7 +214,7 @@
                 </div>
 
                 <div class="text-center">
-                    <p class="text-xs text-gray-400 mb-2 mt-4">Онлайн (Без магии)</p>
+                    <p class="text-xs text-gray-400 mb-2 mt-2 font-bold">ОНЛАЙН</p>
                     <div id="online-controls" class="space-y-2 opacity-50 pointer-events-none transition-opacity">
                         <button onclick="createOnlineGame()" class="w-full bg-blue-100 text-blue-700 font-bold py-2 rounded-lg text-sm hover:bg-blue-200">Создать</button>
                         <div class="flex gap-2">
@@ -216,6 +222,20 @@
                             <button onclick="joinOnlineGame()" class="bg-blue-600 text-white font-bold px-4 rounded-lg text-sm">Войти</button>
                         </div>
                     </div>
+                    
+                    <!-- СПИСОК КОМНАТ -->
+                    <div class="mt-4 border-t border-gray-200 pt-2">
+                        <div class="flex justify-between items-center mb-2 px-1">
+                            <span class="text-xs font-bold text-gray-500 uppercase">Открытые комнаты</span>
+                            <button onclick="refreshRoomList()" class="text-blue-500 hover:text-blue-700 transition" title="Обновить список">
+                                <i class="fas fa-sync-alt text-xs"></i>
+                            </button>
+                        </div>
+                        <div id="rooms-list" class="space-y-2 max-h-32 overflow-y-auto custom-scroll text-left bg-gray-50 p-2 rounded-lg border border-gray-200 min-h-[60px]">
+                            <div class="text-[10px] text-center text-gray-400 py-4">Нажмите <i class="fas fa-sync-alt"></i> чтобы найти игры</div>
+                        </div>
+                    </div>
+                    
                     <div id="auth-status" class="text-[10px] text-gray-400 mt-1">Требуется конфиг</div>
                 </div>
             </div>
@@ -305,7 +325,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- КОНФИГ ---
         const GAME_CONFIG = { mode: 'classic', deckSize: 36, magic: false };
@@ -402,6 +422,53 @@
                 check.classList.add('text-transparent'); check.classList.remove('bg-purple-600', 'border-purple-600', 'text-white');
             }
         };
+        
+        window.refreshRoomList = async () => {
+            if (!isFirebaseReady) return showToast("Нет подключения");
+            const listEl = document.getElementById('rooms-list');
+            listEl.innerHTML = '<div class="text-center py-2"><i class="fas fa-spinner fa-spin text-gray-400"></i></div>';
+            
+            try {
+                // Rule: Fetch all and filter in memory
+                const snap = await getDocs(gamesRef);
+                const rooms = [];
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    if (d.status === 'waiting') {
+                        rooms.push({ id: doc.id, ...d });
+                    }
+                });
+                
+                listEl.innerHTML = '';
+                if (rooms.length === 0) {
+                    listEl.innerHTML = '<div class="text-[10px] text-gray-400 text-center py-2">Нет открытых игр</div>';
+                    return;
+                }
+                
+                rooms.forEach(r => {
+                    const div = document.createElement('div');
+                    div.className = 'bg-white p-2 rounded border border-gray-200 flex justify-between items-center cursor-pointer hover:bg-blue-50 transition shadow-sm';
+                    div.onclick = () => {
+                        document.getElementById('join-game-id').value = r.id;
+                        joinOnlineGame(r.id);
+                    };
+                    const modeText = r.config ? (r.config.mode === 'transfer' ? 'Перевод' : 'Классика') : 'Классика';
+                    const deckText = r.config ? r.config.deckSize : '36';
+                    
+                    div.innerHTML = `
+                        <div>
+                            <div class="text-xs font-bold text-gray-700">Комната #${r.id}</div>
+                            <div class="text-[10px] text-gray-500">${modeText}, ${deckText} карт</div>
+                        </div>
+                        <span class="text-[9px] bg-green-100 text-green-600 px-1.5 py-0.5 rounded font-bold uppercase">Вход</span>
+                    `;
+                    listEl.appendChild(div);
+                });
+            } catch (e) {
+                console.error(e);
+                listEl.innerHTML = '<div class="text-[10px] text-red-400 text-center py-2">Ошибка загрузки</div>';
+            }
+        };
 
         // --- ЗАПУСК ---
         window.startOfflineGame = () => {
@@ -450,9 +517,114 @@
             if (localState.turn === 'bot') startBotTimer();
         };
 
-        // --- ОНЛАЙН ЗАГЛУШКИ (Используют старую логику подключения, но без магии пока) ---
-        window.createOnlineGame = async () => { /* ... старый код ... */ showToast("В разработке (используйте офлайн)"); };
-        window.joinOnlineGame = async () => { /* ... старый код ... */ showToast("В разработке (используйте офлайн)"); };
+        // --- ОНЛАЙН ---
+        window.createOnlineGame = async () => {
+            try {
+                if (!isFirebaseReady) return showToast("Нет подключения к серверу");
+                GAME_MODE = 'ONLINE';
+                const gameId = Math.floor(100000 + Math.random() * 900000).toString();
+                const deck = createDeck(GAME_CONFIG.deckSize); 
+                
+                const state = {
+                    hostId: currentUser.uid,
+                    joinerId: null,
+                    status: 'waiting',
+                    deck: deck,
+                    trumpCard: deck[0],
+                    trumpSuit: deck[0].suit,
+                    hands: { [currentUser.uid]: [] },
+                    table: [],
+                    turn: currentUser.uid,
+                    attacker: currentUser.uid,
+                    lastUpdate: serverTimestamp(),
+                    config: { ...GAME_CONFIG } 
+                };
+
+                await setDoc(doc(gamesRef, gameId), state);
+                currentGameId = gameId;
+                document.getElementById('lobby-screen').classList.add('hidden');
+                document.getElementById('waiting-room').classList.remove('hidden');
+                document.getElementById('display-game-id').innerText = gameId;
+                subscribeToGame(gameId);
+            } catch (e) {
+                console.error("Create Game Error:", e);
+                showToast("Ошибка создания игры");
+                leaveGame();
+            }
+        };
+
+        window.joinOnlineGame = async (optId) => {
+            try {
+                if (!isFirebaseReady) return showToast("Нет подключения");
+                const inputId = optId || document.getElementById('join-game-id').value.trim();
+                if (inputId.length !== 6) return showToast("Нужен ID из 6 цифр");
+                GAME_MODE = 'ONLINE';
+
+                const gameRef = doc(gamesRef, inputId);
+                const snap = await getDoc(gameRef);
+                if (!snap.exists()) return showToast("Игра не найдена");
+                const data = snap.data();
+                if (data.status !== 'waiting') return showToast("Игра занята");
+
+                // Применяем настройки хоста
+                GAME_CONFIG.deckSize = data.config.deckSize;
+                GAME_CONFIG.mode = data.config.mode;
+                GAME_CONFIG.magic = false; // Force magic off in online
+
+                const deck = [...data.deck];
+                const h1 = [], h2 = [];
+                for(let i=0; i<6; i++) { if(deck.length) h1.push(deck.pop()); if(deck.length) h2.push(deck.pop()); }
+
+                await updateDoc(gameRef, {
+                    joinerId: currentUser.uid,
+                    status: 'playing',
+                    deck: deck,
+                    [`hands.${data.hostId}`]: h1,
+                    [`hands.${currentUser.uid}`]: h2,
+                    attacker: data.hostId, 
+                    turn: data.hostId
+                });
+
+                currentGameId = inputId;
+                subscribeToGame(inputId);
+            } catch (e) {
+                console.error("Join Game Error:", e);
+                showToast("Ошибка подключения");
+                leaveGame();
+            }
+        };
+        
+        function subscribeToGame(id) {
+            unsubscribeGame = onSnapshot(doc(gamesRef, id), (snap) => {
+                if(!snap.exists()) {
+                    showToast("Игра завершена");
+                    leaveGame();
+                    return;
+                }
+                const d = snap.data();
+                localState = d;
+                
+                if (d.status === 'playing') {
+                    // Mapping online IDs to 'player' and 'bot'
+                    const myUid = currentUser.uid;
+                    const oppUid = d.hostId === myUid ? d.joinerId : d.hostId;
+                    
+                    // Temporary patch localState
+                    localState.hands['player'] = d.hands[myUid];
+                    localState.hands['bot'] = d.hands[oppUid];
+                    localState.turn = d.turn === myUid ? 'player' : 'bot';
+                    localState.attacker = d.attacker === myUid ? 'player' : 'bot';
+                    
+                    showGameUI();
+                    renderGame(localState);
+                }
+            }, (error) => {
+                 console.error("Snapshot error:", error);
+                 showToast("Ошибка синхронизации");
+                 leaveGame();
+            });
+        }
+
 
         // --- ЛОГИКА ИГРОКА ---
         window.globalClick = (e) => {
@@ -530,7 +702,7 @@
                 performTransfer(card, 'player');
             } else { // Beat
                 if (botTimer) clearTimeout(botTimer);
-                applyMove(card, 'defend', 0, 'player'); // В переводе бьем первую (единственную активную)
+                applyMove(card, 'defend', 0, 'player'); 
                 addMana(MANA_GAIN_DEFEND);
             }
         };
@@ -548,28 +720,43 @@
             if (idx !== -1) hand.splice(idx, 1);
         }
 
-        function applyMove(card, type, idx, who) {
+        async function applyMove(card, type, idx, who) {
             const state = localState;
             removeCardFromHand(state.hands[who], card);
+
+            let newTurn = state.turn;
 
             if (type === 'attack') {
                 state.table.push({ attack: card, defend: null });
                 state.turn = (who === 'player' ? 'bot' : 'player'); // Переход хода защищающемуся
-                if (who === 'player') startBotTimer();
+                if (who === 'player' && GAME_MODE === 'OFFLINE') startBotTimer();
             } else {
                 state.table[idx].defend = card;
                 const hasUndefended = state.table.some(p => !p.defend);
                 if (!hasUndefended) {
                     state.turn = state.attacker; // Всё отбито -> ход Атакующего
-                    if (state.attacker === 'bot') startBotTimer();
-                } else if (who === 'bot') {
+                    if (state.attacker === 'bot' && GAME_MODE === 'OFFLINE') startBotTimer();
+                } else if (who === 'bot' && GAME_MODE === 'OFFLINE') {
                     startBotTimer(); // Бот продолжает бить
                 }
             }
-            renderGame(state);
+
+            if (GAME_MODE === 'ONLINE') {
+                const myUid = currentUser.uid;
+                const oppUid = state.hostId === myUid ? state.joinerId : state.hostId;
+                await updateDoc(doc(gamesRef, currentGameId), {
+                    [`hands.${myUid}`]: state.hands.player,
+                    [`hands.${oppUid}`]: state.hands.bot,
+                    table: state.table,
+                    turn: state.turn === 'player' ? myUid : oppUid,
+                    attacker: state.attacker === 'player' ? myUid : oppUid
+                });
+            } else {
+                renderGame(state);
+            }
         }
 
-        function performTransfer(card, who) {
+        async function performTransfer(card, who) {
             const state = localState;
             const victim = (who === 'player' ? 'bot' : 'player');
             removeCardFromHand(state.hands[who], card);
@@ -579,11 +766,23 @@
             state.attacker = who;
             state.turn = victim;
             
-            renderGame(state);
-            if (who === 'player') { showEffect("ПЕРЕВОД!"); startBotTimer(); }
+            if (GAME_MODE === 'ONLINE') {
+                const myUid = currentUser.uid;
+                const oppUid = state.hostId === myUid ? state.joinerId : state.hostId;
+                await updateDoc(doc(gamesRef, currentGameId), {
+                    [`hands.${myUid}`]: state.hands.player,
+                    [`hands.${oppUid}`]: state.hands.bot,
+                    table: state.table,
+                    turn: state.turn === 'player' ? myUid : oppUid,
+                    attacker: state.attacker === 'player' ? myUid : oppUid
+                });
+            } else {
+                renderGame(state);
+                if (who === 'player') { showEffect("ПЕРЕВОД!"); startBotTimer(); }
+            }
         }
 
-        function endTurn(success) { // success = BITO
+        async function endTurn(success) { // success = BITO
             const state = localState;
             const defender = (state.attacker === 'player' ? 'bot' : 'player');
             const attacker = state.attacker;
@@ -611,8 +810,21 @@
             revealedBotIndices = [];
             document.getElementById('player-hand').classList.remove('shield-active');
 
-            renderGame(state);
-            if (state.turn === 'bot') startBotTimer();
+            if (GAME_MODE === 'ONLINE') {
+                const myUid = currentUser.uid;
+                const oppUid = state.hostId === myUid ? state.joinerId : state.hostId;
+                await updateDoc(doc(gamesRef, currentGameId), {
+                    deck: state.deck,
+                    [`hands.${myUid}`]: state.hands.player,
+                    [`hands.${oppUid}`]: state.hands.bot,
+                    table: state.table,
+                    turn: state.turn === 'player' ? myUid : oppUid,
+                    attacker: state.attacker === 'player' ? myUid : oppUid
+                });
+            } else {
+                renderGame(state);
+                if (state.turn === 'bot') startBotTimer();
+            }
         }
 
         // --- БОТ ---
@@ -913,7 +1125,14 @@
         }
 
         window.copyId = () => { navigator.clipboard.writeText(currentGameId); showToast("ID скопирован"); }
-        window.leaveGame = () => location.reload();
+        window.leaveGame = () => {
+            if(unsubscribeGame) unsubscribeGame();
+            document.getElementById('game-ui').classList.add('hidden');
+            document.getElementById('waiting-room').classList.add('hidden');
+            document.getElementById('lobby-screen').classList.remove('hidden');
+            document.getElementById('lobby-main').classList.remove('hidden'); 
+            localState = null;
+        };
         window.hideGameOver = () => document.getElementById('game-over-screen').classList.add('hidden');
         window.showGameUI = () => { document.getElementById('lobby-screen').classList.add('hidden'); document.getElementById('game-ui').classList.remove('hidden'); };
         window.showToast = (m) => { const t=document.getElementById('toast'); t.innerText=m; t.classList.remove('opacity-0','scale-90'); setTimeout(()=>t.classList.add('opacity-0','scale-90'), 2000); };
